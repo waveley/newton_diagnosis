@@ -1,0 +1,37 @@
+---
+title: "Tinkering"
+author: "Waveley Qiu (wq2162)"
+date: "2022-03-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+source("shared_code/setup.R")
+```
+
+## EDA
+
+Let's import and take a look at the data.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+
+# sanity check nrow(bc)
+# sanity check ncol(bc)
+# sanity check table(bc$diagnosis)
+```
+
+
+Let's take a look at the distributions of other variables.
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bc %>% 
+  select(diagnosis, contains("mean")) %>%
+  gather(key = "stat", value = "value", 2:11) %>% 
+  ggplot(aes(x = value, fill = diagnosis)) +
+    facet_wrap(~ stat, scales = "free") +
+    geom_density(alpha = 0.5)
+```
+
+```{r}
+tbl_summary(bc, by = diagnosis)
+```

@@ -1,0 +1,48 @@
+---
+title: "Functions"
+author: "Waveley Qiu (wq2162)"
+date: "2022-03-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+## Logistic Functions
+
+```{r}
+log_lik <- function(x, y, beta_0, beta){
+  
+  u <- beta0 + beta*x
+  
+  expu <- exp(u)
+  
+  loglik <- sum(y*u - log(1 + expu))
+  
+  p <- expu/(1 + expu)
+  
+  grad <- c(sum(y - p), sum(x * (y - p)))
+  
+  x_with_1 <- c(1, x)
+  
+  hess <- -sum(t(x_with_1) %*% 
+                 x_with_1 * p * (1 - p))
+  
+  return(list(
+    loglik = loglik,
+    grad = grad,
+    hess = hess
+  ))
+}
+```
+
+
+
+
+
+```
+
