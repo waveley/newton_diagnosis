@@ -1,0 +1,176 @@
+---
+title: "Untitled"
+author: "Amy Pitts"
+date: "3/17/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("shared_code/setup.R")
+```
+
+
+## Data import 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+```
+
+This dataset has `r nrow(bc)` rows and `r ncol(bc)` columns. The outcome variable of interst is `Diagnosis` which takes on values benign or malignant cases.  There are `r table(bc$diagnosis)[[1]]` benign cases and `r table(bc$diagnosis)[[2]]` malignant cases as seen below in Table 1. One variable is `id` and the rest 30 variables are the mean, sd and largest values of the following criteria. 
+
+- radius (mean of distances from center to points on the perimeter)
+- texture (standard deviation of gray-scale values)
+- perimeter
+- area
+- smoothness (local variation in radius lengths)
+- compactness (perimeterˆ2 / area - 1.0)
+- concavity (severity of concave portions of the contour)
+- concave points (number of concave portions of the contour)
+- symmetry
+- fractal dimension ("coastline approximation" - 1)
+
+Using this dataset models will be compared and compared on their ability to predict cancer diagnosis. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+bc %>% 
+  select(-id) %>% 
+  mutate(
+    diagnosis = ifelse(diagnosis == "B", "Benign", "Malignant")
+  ) %>%
+  tbl_summary( by = diagnosis,
+               statistic = list(all_continuous() ~ "{mean} ({sd})",
+                                all_categorical() ~ "{n} / {N} ({p}%)"),
+               digits = all_continuous() ~ 3)  %>% 
+  add_p()
+```
+
+## Build a logistic model to classify the images into malignant/benign 
+Before building the model we need to first write down the  likelihood function, its gradient and Hessian matrix.
+
+
+The likelihood function for our data which has a single binary response and 30 numerical explanatory variables is
+\[
+\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,30}) = \frac{e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{30}x_{i,30}}}{1 + e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{30}x_{i,30}}} = \frac{e^{\beta_0+\sum^{30}_{j=1}\beta_ix_{i,j}}}{1 + e^{\beta_0+\sum^{30}_{j=1}\beta_ix_{i,j}}}
+\]
+
+Where $\mathbf{X_i}$ represents the $i$ observation of all 30 of our predictor variables. 
+For the data give we have the likelihood is given by 
+\[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
+\]
+Finding the log-likelihood we have 
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{30}_{j=1}\beta_ix_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{30}_{j=1} \beta_ix_{i,j} \right) \right) \right]
+\]
+
+The gradient can then can be solved for. Observe 
+
+\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[ \sum^n_{i=1} \begin{matrix} y_i-\pi_i & \sum^n_{i=1} x_{i,1}(y_i-\pi) & \dots & \sum^n_{i=1} x_{i,30} (y_i-\pi) \end{matrix}\right]^{T}_{(1 \times 31)} 
+\]
+
+Finally, with the gradient we can derive our hessian. Note that due to the 30 predictor variables the hessian will be a 31 by 31 matrix. 
+
+\begin{align*}
+ \nabla^2 l(\mathbf{X}|\vec{\beta}) &= - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i) \\
+ &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
+\end{align*}
+
+Where $X = (x_{i,1}, \dots, x_{i, 30})$. Note that this matrix will always be negative definite at all parameters making the this a well behaved problem. 
+
+
+
+## Develop a Newton-Raphson algorithm to estimate your model
+
+Modifications: 
+- I include half stepping in the Newton-Raphson method. 
+
+Want to include: 
+- Assent direction 
+
+```{r}
+dat <- bc %>% select(-id) %>%
+  rename(y = diagnosis) %>%
+  mutate(y = ifelse(y=="B", 0, 1))
+```
+
+
+```{r}
+loglike_func <- function(dat, betavec){
+  dat_x = unname(as.matrix(dat[,-1]))
+  u = dat_x%*%betavec
+  pi <- exp(u) / (1+exp(u))
+  
+  # loglikelihood
+  loglik <- sum(dat$y*u - log(1 + exp(u)))
+  
+  #gradient 
+  grad <- t(dat_x)%*%(dat$y - pi)
+  
+  # Hessian 
+  save_mat = matrix(0, nrow = dim(dat)[1], ncol = dim(dat)[1]) 
+  diag(save_mat)= pi*(1-pi)
+  hess = -t(dat_x)%*% save_mat %*%(dat_x)
+  
+  return(list(
+    loglik = loglik,
+    grad = grad,
+    hess = hess
+  ))
+  
+}
+
+# loglike_func(dat, betavec = c( rep(0.03, 30))) 
+
+```
+
+
+This is not working right now.... 
+```{r}
+NewtonRaphson <- function(dat,  start, tol=100, maxiter = 20){
+  i = 0
+  cur = start 
+  stuff = loglike_func(dat, cur)
+  res <- c(i=0, "loglik" = stuff$loglik,  cur, "step" = 1)
+  prevloglik <- -Inf # To make sure it iterates
+  while(i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+    step = 1
+    i <- i + 1
+    prevloglik <- stuff$loglik
+    
+    # ascent direct check 
+    eigen_vals = eigen(stuff$hess)
+    if(max(eigen_vals$values) <= 0 ){ # we don't want neg def 
+      hess = stuff$hess
+    } else{ # if it is neg def then need to adjust 
+      hess = stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
+    }
+    prev  <- cur
+    cur   <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
+    stuff <- loglike_func(dat, cur) # log-lik, gradient, Hessian
+    
+    # doing half stepping 
+    while(stuff$loglik < prevloglik){
+      stuff <- loglike_func(dat, prev)
+      step = step / 2 # this is where half steping happens 
+      cur <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
+      stuff = loglike_func(dat, cur)
+    }
+    # Add current values to results matrix
+    res <- rbind(res, c(i, stuff$loglik, cur, step))
+  }
+  
+  colnames(res) <- c(names(dat[,-1]), "i", "loglik", "step")
+  return(res)
+}
+#Running the algorithm with good starting values:
+#betavec = rep(1, 31)
+betavec = c(rep(0.02, 30))
+ans <- NewtonRaphson(dat,betavec)
+
+data.frame(
+  i = data.frame(ans)$i,
+  step = data.frame(ans)$step,
+  loglik = data.frame(ans)$loglik
+)
+   
+```
+
