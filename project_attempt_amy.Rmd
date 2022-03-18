@@ -81,16 +81,18 @@ Where $X = (x_{i,1}, \dots, x_{i, 30})$. Note that this matrix will always be ne
 ## Develop a Newton-Raphson algorithm to estimate your model
 
 Modifications: 
+
 - I include half stepping in the Newton-Raphson method. 
 - Assent direction 
 
+Data Preprocess 
 ```{r}
 dat <- bc %>% select(-id) %>%
   rename(y = diagnosis) %>%
   mutate(y = ifelse(y=="B", 0, 1))
 ```
 
-
+Functions 
 ```{r}
 loglike_func <- function(dat, betavec){
   # setting up an intercept 
@@ -120,7 +122,7 @@ loglike_func <- function(dat, betavec){
 #loglike_func(dat, betavec = c( rep(0.03, 31)))  # test! 
 
 
-NewtonRaphson <- function(dat,  start, tol = 1e-10, maxiter = 200){
+NewtonRaphson <- function(dat,  start, tol = 1e-11, maxiter = 200){
   i = 0
   cur = start 
   stuff = loglike_func(dat, cur)
@@ -162,6 +164,7 @@ ans <- NewtonRaphson(dat,betavec)
 
 ```
 
+Results: 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 # NR results 
 data.frame(
@@ -182,6 +185,20 @@ data.frame(ans) %>%
   mutate(`Beta Coef` = round(`Beta Coef`,3)) %>% 
   knitr::kable()
   
+```
+
+
+## Comparing to glm model 
+
+Data Cleaning 
+```{r}
+
+```
+
+Model Implementation 
+```{r}
+glm_fit <- glm(y~., data=dat)
+summary(glm_fit)
 ```
 
 
