@@ -82,8 +82,6 @@ Where $X = (x_{i,1}, \dots, x_{i, 30})$. Note that this matrix will always be ne
 
 Modifications: 
 - I include half stepping in the Newton-Raphson method. 
-
-Want to include: 
 - Assent direction 
 
 ```{r}
@@ -95,7 +93,13 @@ dat <- bc %>% select(-id) %>%
 
 ```{r}
 loglike_func <- function(dat, betavec){
-  dat_x = unname(as.matrix(dat[,-1]))
+  # setting up an intercept 
+  dat_temp = dat %>%
+    rename(intercept = y) %>%
+    mutate(intercept = rep(1, nrow(dat) ))
+  dat_x = unname(as.matrix(dat_temp)) # creating the x matrix 
+  
+  # finding the pi values 
   u = dat_x%*%betavec
   pi <- exp(u) / (1+exp(u))
   
@@ -106,26 +110,17 @@ loglike_func <- function(dat, betavec){
   grad <- t(dat_x)%*%(dat$y - pi)
   
   # Hessian 
-  save_mat = matrix(0, nrow = dim(dat)[1], ncol = dim(dat)[1]) 
-  diag(save_mat)= pi*(1-pi)
-  hess = -t(dat_x)%*% save_mat %*%(dat_x)
+  mat_temp = matrix(0, nrow = dim(dat)[1], ncol = dim(dat)[1]) 
+  diag(mat_temp)= pi*(1-pi) 
+  hess = -t(dat_x)%*% mat_temp %*%(dat_x)
   
-  return(list(
-    loglik = loglik,
-    grad = grad,
-    hess = hess
-  ))
+  return(list(loglik = loglik, grad = grad, hess = hess))
   
 }
-
-# loglike_func(dat, betavec = c( rep(0.03, 30))) 
-
-```
+#loglike_func(dat, betavec = c( rep(0.03, 31)))  # test! 
 
 
-This is not working right now.... 
-```{r}
-NewtonRaphson <- function(dat,  start, tol=100, maxiter = 20){
+NewtonRaphson <- function(dat,  start, tol = 1e-10, maxiter = 200){
   i = 0
   cur = start 
   stuff = loglike_func(dat, cur)
@@ -150,27 +145,43 @@ NewtonRaphson <- function(dat,  start, tol=100, maxiter = 20){
     # doing half stepping 
     while(stuff$loglik < prevloglik){
       stuff <- loglike_func(dat, prev)
-      step = step / 2 # this is where half steping happens 
-      cur <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
-      stuff = loglike_func(dat, cur)
+      step  <- step / 2 # this is where half steping happens 
+      cur   <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
+      stuff <- loglike_func(dat, cur)
     }
     # Add current values to results matrix
     res <- rbind(res, c(i, stuff$loglik, cur, step))
   }
   
-  colnames(res) <- c(names(dat[,-1]), "i", "loglik", "step")
+  colnames(res) <- c("intercept", names(dat[,-1]), "i", "loglik", "step")
   return(res)
 }
-#Running the algorithm with good starting values:
-#betavec = rep(1, 31)
-betavec = c(rep(0.02, 30))
+#Running the algorithm with random starting values 
+betavec = c(rep(0.01, 31))
 ans <- NewtonRaphson(dat,betavec)
 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# NR results 
 data.frame(
   i = data.frame(ans)$i,
   step = data.frame(ans)$step,
   loglik = data.frame(ans)$loglik
 )
-   
+
+# beta values 
+data.frame(ans) %>%
+  select(-step, -loglik, -i) %>%
+  filter(row_number() == n()) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variables Name",
+    values_to = "Beta Coef"
+  ) %>% 
+  mutate(`Beta Coef` = round(`Beta Coef`,3)) %>% 
+  knitr::kable()
+  
 ```
+
 
