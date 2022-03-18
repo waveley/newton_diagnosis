@@ -34,3 +34,143 @@ bc %>%
 ```{r}
 tbl_summary(bc, by = diagnosis)
 ```
+
+```{r}
+bc <- bc %>% mutate(bin_out = ifelse(diagnosis == "M", 1, 0)) %>% relocate(bin_out)
+```
+
+## Logistic Function
+
+The likelihood function is defined as follows:
+
+$$
+f(\beta_0, \beta_1,...,\beta_{30}) = \sum_{i=1}^n \left(Y_i\left(\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}\right) - \log(1+e^{\left(\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}\right)}\right)
+$$
+
+Let $\pi_i = \frac{e^{\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}}}{1+e^{\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}}}$. Then, the gradient of this function is defined as follows:
+
+$$
+\triangledown f(\beta_0, \beta_1, ..., \beta_{30}) = 
+\left(
+\matrix{
+\sum_{i=1}^n Y_i-\pi_i \\ 
+\sum_{i=1}^n x_{i1}(Y_i - \pi_i)\\
+\sum_{i=1}^n x_{i2}(Y_i - \pi_i)\\
+\vdots \\
+\sum_{i=1}^n x_{i30}(Y_i - \pi_i)
+}
+\right)
+$$
+Finally, we define the Hessian of this function as follows:
+
+$$
+\begin{aligned}
+\triangledown^2f(\beta_0, \beta_1, ..., \beta_{30}) &=  -\sum_{i=1}^n \left(\matrix{1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}}\right) \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right)\pi_i(1-\pi_i)
+\\
+&= -\left(\matrix{\sum_{i=1}^n \pi_i(1-\pi_i) &\quad \sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^nx_{i30}\pi_i(1-\pi_i) \\
+\sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}^2\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}x_{i1}\pi_i(1-\pi_i) \\
+\sum_{i=1}^n x_{i2}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{i2}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}x_{i2}\pi_i(1-\pi_i) \\
+\vdots &\quad \ddots &\quad \ddots &\quad \vdots \\
+\sum_{i=1}^n x_{i30}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{i30}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}^2\pi_i(1-\pi_i) 
+}\right)
+\\
+&= \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right) I(\pi_i(1-\pi_i))\left(\matrix{1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}}\right)
+\end{aligned}
+$$
+
+```{r}
+rep_col <- function(x, n){
+  matrix(rep(x, each = n), ncol = n, byrow = TRUE)
+}
+
+logistic_stuff <- function(dat, beta){
+  
+  x <- dat[[1]] %>% unname() %>% as.matrix()
+  y <- dat[[2]] %>% unname() %>% as.matrix()
+  
+  x_with_1 <- cbind(1, x) 
+    
+  u <- x_with_1 %*% beta
+ # return(u)
+  
+  expu <- exp(u)
+  
+  loglik <- sum(y*u - log(1 + expu))
+
+  p <- expu/(1 + expu)
+  #  return(p)
+  # return(p)
+  grad <- t(x_with_1) %*% (y - p)
+  
+  i_mat <- diag(nrow(p))
+  diag(i_mat) <- p*(1 - p)
+
+  hess <- -(t(x_with_1) %*% i_mat %*% x_with_1)
+  return(list(
+    loglik = loglik,
+    grad = grad,
+    hess = hess
+  ))
+}
+```
+
+```{r}
+NewtonRaphson <- function(dat, func, start, tol = 1e-10, maxiter = 200) {
+  i <- 0
+  cur <- start
+  stuff <- func(dat, cur)
+  res <- c(0, stuff$loglik, cur)
+  prevloglik <- -Inf
+  
+  while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+    i <- i + 1
+    prevloglik <- stuff$loglik
+    prev <- cur
+    cur <- prev - solve(stuff$hess) %*% stuff$grad
+    stuff <- func(dat, cur)
+    newhess <- stuff$hess
+    
+    eigen_vals = eigen(newhess)
+    if(max(eigen_vals$values) <= 0 ){ # we don't want neg def 
+      newhess = stuff$hess
+    } else{ # if it is neg def then need to adjust 
+      newhess = stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
+    }
+    
+    cur <- prev - solve(newhess) %*% stuff$grad
+    stuff <- func(dat, cur)
+    
+    j = 1
+    while (stuff$loglik < prevloglik) {  # back tracking (half-step)
+         halfstep = 1/(2^j)
+         cur <- prev - halfstep*solve(newhess) %*% stuff$grad
+         stuff <- func(dat, cur)
+        # sanity check print("backtracking")
+         j = j + 1
+      
+    }
+    res <- rbind(res, c(i, stuff$loglik, cur))
+  }
+  return(res)
+}
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+beta_init <- rep(0.002, 31) %>% as.matrix()
+
+test1 <- logistic_stuff(
+  list(x = bc[,-c(1,2, 3)] %>% as.matrix(), 
+       y = bc$bin_out %>% as.matrix()), 
+  beta = beta_init)
+
+ans <- NewtonRaphson(
+      list(x = bc[,-c(1,2, 3)] %>% as.matrix(), 
+       y = bc$bin_out %>% as.matrix()),
+       logistic_stuff, 
+       beta_init)
+ans
+```
+
+
+
