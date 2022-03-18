@@ -21,7 +21,6 @@ bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 # sanity check table(bc$diagnosis)
 ```
 
-
 Let's take a look at the distributions of other variables.
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 bc %>% 

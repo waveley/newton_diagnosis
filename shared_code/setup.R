@@ -9,6 +9,8 @@ library(tidyverse)
 library(progress) 
 library(beepr)
 library(gtsummary)
+library(matrixcalc)
+
 
 # set knitr defaults
 knitr::opts_chunk$set(
