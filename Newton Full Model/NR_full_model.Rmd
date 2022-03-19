@@ -257,14 +257,10 @@ logisticstuff <- function(X, y, beta) {
     }
   }
   loglik <- t(y) %*% log(p) + t(1-y)  %*% log(1-p)
-  grad <- t(X) %*% (y-p)
-  W <- diag(c(p*(1-p))) 
-  Hess <- -t(X) %*% W %*% X
+  grad <- t(X) %*% (y-p); W <- diag(c(p*(1-p))); Hess <- -t(X) %*% W %*% X
   return(list(loglik = loglik, grad = grad, Hess = Hess))
 }
-
-X <- model.matrix(diagnosis~., training_df_5p)
-y <- as.matrix(training_df$diagnosis)
+X <- model.matrix(diagnosis~., training_df_5p); y <- as.matrix(training_df$diagnosis)
 
 NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200) {
    i <- 0
@@ -278,7 +274,6 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
    while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
       i <- i + 1
       prev_beta <- cur_beta
-      
       #checking if direction is ascent. If not, transform Hessian into negative definite.
       if (asc_dir_check < 0) {
          stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
@@ -286,23 +281,19 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
          stuff <- logit_func(X, y, prev_beta)
          prevloglik <- stuff$loglik
       }
-      
       else {
          prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, prev_beta)
          prevloglik <- stuff$loglik
       }
-      
       cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
       stuff2 <- logit_func(X, y, cur2_beta)
-      
       #condition check before step halving process
       if (stuff2$loglik > prevloglik) {
          cur_beta = cur2_beta
          stuff = stuff2
          asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
       }
-      
       #step halving process
       else {
          repeat {
@@ -321,23 +312,22 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
    }
    return(res)
 }
-
 coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
   
 ans <- NewtonRaphson_mod(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL )
 ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>% 
    kable_styling(font_size = 8, latex_options = "HOLD_position")
-
 ```
 
-
+```{r, echo = FALSE}
+cat("Fitted glm model Beta0:",3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
+```
 
 ## Modified Newton Raphson with all 31 parameters
 
 ```{r, error = TRUE}
 logisticstuff <- function(X, y, beta) {
   p <- exp(X%*%beta) / (1 + exp(X%*%beta)) %>% as.vector()
-
   for (i in 1:length(p)) {
     if (p[i] == 1) {
       if (sum(is.na(p) == TRUE) > 0) {
@@ -347,14 +337,10 @@ logisticstuff <- function(X, y, beta) {
     }
   }
   loglik <- t(y) %*% log(p) + t(1-y)  %*% log(1-p)
-  grad <- t(X) %*% (y-p)
-  W <- diag(c(p*(1-p))) 
-  Hess <- -t(X) %*% W %*% X
+  grad <- t(X) %*% (y-p); W <- diag(c(p*(1-p))) ; Hess <- -t(X) %*% W %*% X
   return(list(loglik = loglik, grad = grad, Hess = Hess))
 }
-
-X <- model.matrix(diagnosis~., training_df_31p)
-y <- as.matrix(training_df$diagnosis)
+X <- model.matrix(diagnosis~., training_df_31p); y <- as.matrix(training_df$diagnosis)
 
 NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200) {
    i <- 0
@@ -376,16 +362,13 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
          stuff <- logit_func(X, y, prev_beta)
          prevloglik <- stuff$loglik
       }
-      
       else {
          prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, prev_beta)
          prevloglik <- stuff$loglik
       }
-      
       cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
       stuff2 <- logit_func(X, y, cur2_beta)
-      
       #condition check before step halving process
       if (stuff2$loglik > prevloglik) {
          cur_beta = cur2_beta
@@ -410,7 +393,6 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
    }
    return(res)
 }
-
 coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
 ```
 
@@ -474,29 +456,23 @@ NewtonRaphson_mod_0 <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21
 ans <- NewtonRaphson_mod_0(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL) 
 ans %>% kbl(caption = "Newton Raphson result with 31 parameters") %>% 
    kable_styling(font_size = 8, latex_options = "HOLD_position")
-  
 ans <- NewtonRaphson_mod(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL) 
-
 ```
 
-
-## Conundrum:
+### Conundrum:
 
 It is to be observed most of the absolute values of $\beta_i$ continue to increase as Newton Raphson algorithm proceeds. This causes some of the elements in p vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, Newton Raphson algorithm cannot go further till its convergence of maximum likelihood estimation.
 
-
-## Proof for why Newton Raphson algorithm cannot reach convergence
+### Proof for why Newton Raphson algorithm cannot reach convergence
 
 ```{r}
 glm_model_beta_vector <- beta2[2] %>% pull()
-
 p <- exp(X %*% glm_model_beta_vector) / (1 + exp(X %*% glm_model_beta_vector))
-
-which(p == 1)
-
+count <- which(p == 1) %>% length() 
+total <- length(p)
+cat("Number of p = 1:",count,"out of",total)
 log_likelihood <- t(y) %*% log(p) + t(1-y)  %*% log(1-p)
-
-log_likelihood
+cat("log_likelihood:",log_likelihood)
 ```
 
 
