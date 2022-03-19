@@ -387,9 +387,9 @@ It is to be observed most of the absolute values of $\beta_i$ continue to increa
 ## Proof for why Newton Raphson algorithm cannot reach convergence
 
 ```{r}
-true_beta_vector <- beta2[2] %>% pull()
+glm_model_beta_vector <- beta2[2] %>% pull()
 
-p <- exp(X %*% true_beta_vector) / (1 + exp(X %*% true_beta_vector))
+p <- exp(X %*% glm_model_beta_vector) / (1 + exp(X %*% glm_model_beta_vector))
 
 which(p == 1)
 
