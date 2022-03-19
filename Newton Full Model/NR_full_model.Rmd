@@ -374,7 +374,7 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) 
 coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
   
 ans <- NewtonRaphson_mod(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL ) 
-ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>% 
+ans %>% kbl(caption = "Newton Raphson result with 31 parameters") %>% 
    kable_styling(font_size = 8, latex_options = "HOLD_position")
 
 ```
