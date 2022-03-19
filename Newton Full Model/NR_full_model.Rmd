@@ -383,7 +383,7 @@ ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>%
 
 ## Conundrum:
 
-It is to be observed most of the $\beta_i$ increase as Newton Raphson algorithm proceeds. This causes some of the elements in p vector to be very close to 1, leading the next log likelihood to diverge to negative infinity. As a result, Newton Raphson algorithm cannot go further. 
+It is to be observed most of the $\beta_i$ increase as Newton Raphson algorithm proceeds. This causes some of the elements in p vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, Newton Raphson algorithm cannot go further till its convergence of maximum likelihood estimation.
 
 ## Proof for why Newton Raphson algorithm cannot reach convergence
 
@@ -395,6 +395,9 @@ p <- exp(X %*% true_beta_vector) / (1 + exp(X %*% true_beta_vector))
 which(p == 1)
 
 log_likelihood <- t(y) %*% log(p) + t(1-y)  %*% log(1-p)
+
 log_likelihood
 ```
+
+
 
