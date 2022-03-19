@@ -52,29 +52,40 @@ Let $\pi_i = \frac{e^{\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}}}{1+e^{\beta_0 + \
 $$
 \triangledown f(\beta_0, \beta_1, ..., \beta_{30}) = 
 \left(
-\matrix{
+\begin{matrix}
 \sum_{i=1}^n Y_i-\pi_i \\ 
 \sum_{i=1}^n x_{i1}(Y_i - \pi_i)\\
 \sum_{i=1}^n x_{i2}(Y_i - \pi_i)\\
 \vdots \\
 \sum_{i=1}^n x_{i30}(Y_i - \pi_i)
-}
+\end{matrix}
 \right)
 $$
 Finally, we define the Hessian of this function as follows:
 
 $$
 \begin{aligned}
-\triangledown^2f(\beta_0, \beta_1, ..., \beta_{30}) &=  -\sum_{i=1}^n \left(\matrix{1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}}\right) \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right)\pi_i(1-\pi_i)
+\triangledown^2f(\beta_0, \beta_1, ..., \beta_{30}) &=  -\sum_{i=1}^n \left(
+\begin{matrix}
+1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}
+\end{matrix}
+\right) \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right)\pi_i(1-\pi_i)
 \\
-&= -\left(\matrix{\sum_{i=1}^n \pi_i(1-\pi_i) &\quad \sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^nx_{i30}\pi_i(1-\pi_i) \\
+&= -\left(
+\begin{matrix}
+\sum_{i=1}^n \pi_i(1-\pi_i) &\quad \sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^nx_{i30}\pi_i(1-\pi_i) \\
 \sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}^2\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}x_{i1}\pi_i(1-\pi_i) \\
 \sum_{i=1}^n x_{i2}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{i2}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}x_{i2}\pi_i(1-\pi_i) \\
 \vdots &\quad \ddots &\quad \ddots &\quad \vdots \\
 \sum_{i=1}^n x_{i30}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{i30}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{i30}^2\pi_i(1-\pi_i) 
-}\right)
+\end{matrix}
+\right)
 \\
-&= \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right) I(\pi_i(1-\pi_i))\left(\matrix{1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}}\right)
+&= \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{i30}\right) I(\pi_i(1-\pi_i))\left(
+\begin{matrix}
+1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{i30}
+\end{matrix}
+\right)
 \end{aligned}
 $$
 
@@ -115,39 +126,41 @@ logistic_stuff <- function(dat, beta){
 ```
 
 ```{r}
-NewtonRaphson <- function(dat, func, start, tol = 1e-10, maxiter = 200) {
+
+NewtonRaphson <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
   i <- 0
   cur <- start
   stuff <- func(dat, cur)
   res <- c(0, stuff$loglik, cur)
   prevloglik <- -Inf
   
-  while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+  while (i < maxiter && abs(stuff$loglik - prevloglik) > tol && !is.na(stuff$loglik)) {
     i <- i + 1
     prevloglik <- stuff$loglik
     prev <- cur
-    cur <- prev - solve(stuff$hess) %*% stuff$grad
-    stuff <- func(dat, cur)
-    newhess <- stuff$hess
+    newhess <- ((stuff$hess + t(stuff$hess))/2)
     
-    eigen_vals = eigen(newhess)
-    if(max(eigen_vals$values) <= 0 ){ # we don't want neg def 
-      newhess = stuff$hess
-    } else{ # if it is neg def then need to adjust 
-      newhess = stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
+    if (!is.negative.definite(newhess)) { # redirection
+     while (!is.negative.definite(newhess)) {
+       # subtracts identity matrix until a negative definite matrix is achieved
+        newhess1 <- newhess - 0.0001*diag(31) 
+       # sanity check print("changing ascent direction")
+        newhess <- ((newhess1 + t(newhess1))/2)
+      }
     }
     
     cur <- prev - solve(newhess) %*% stuff$grad
     stuff <- func(dat, cur)
     
-    j = 1
-    while (stuff$loglik < prevloglik) {  # back tracking (half-step)
+    if (stuff$loglik < prevloglik) {  # back tracking (half-step)
+      j = 1
+      while (stuff$loglik < prevloglik & (!is.na(stuff$loglik))) {
          halfstep = 1/(2^j)
          cur <- prev - halfstep*solve(newhess) %*% stuff$grad
          stuff <- func(dat, cur)
         # sanity check print("backtracking")
          j = j + 1
-      
+      }
     }
     res <- rbind(res, c(i, stuff$loglik, cur))
   }
@@ -157,7 +170,7 @@ NewtonRaphson <- function(dat, func, start, tol = 1e-10, maxiter = 200) {
 
 ```{r, warning=FALSE, message=FALSE}
 
-beta_init <- rep(0.002, 31) %>% as.matrix()
+beta_init <- rep(0.001, 31) %>% as.matrix()
 
 test1 <- logistic_stuff(
   list(x = bc[,-c(1,2, 3)] %>% as.matrix(), 
@@ -171,6 +184,23 @@ ans <- NewtonRaphson(
        beta_init)
 ans
 ```
+
+
+The beta estimates are as follows:
+
+```{r, warning=FALSE, message=FALSE}
+
+if (sum(is.na(ans[nrow(ans),])) > 0) {
+  beta_est <- ans[nrow(ans) - 1, -c(1,2)]
+}
+
+if (sum(is.na(ans[nrow(ans),])) == 0) {
+  beta_est <- ans[nrow(ans), -c(1,2)]
+}
+
+tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) %>% knitr::kable()
+```
+
 
 
 
