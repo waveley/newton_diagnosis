@@ -123,18 +123,26 @@ ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>%
 
 
 ```{r, echo = FALSE}
-cat("Fitted glm model Beta0:",-3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
+cat("Fitted glm model Beta0:",3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
 ```
 
 \newpage
 
 ## Newton Raphson with all 31 parameters
 
-```{r}
+```{r, error = TRUE}
+stopQuietly <- function(...) {
+  blankMsg <- sprintf("\r%s\r", paste(rep(" ", getOption("width")-1L), collapse=" "));
+  stop(simpleError("cannot proceed the algorithm further due to NaN values in p vector"));
+}
+
 logisticstuff <- function(X, y, beta) {
   p <- exp(X%*%beta) / (1 + exp(X%*%beta)) %>% as.vector()
   for (i in 1:length(p)) {
     if (p[i] == 1) {
+      if (sum(is.na(p) == TRUE) > 0) {
+        stopQuietly()
+      }
       p[i] <- 1-2e-8
     }
   }
@@ -148,7 +156,7 @@ logisticstuff <- function(X, y, beta) {
 X <- model.matrix(diagnosis~., training_df_31p)
 y <- as.matrix(training_df$diagnosis)
 
-NewtonRaphson <- function(X, y, logit_func, start, tol=1e-10, maxiter = 43) {
+NewtonRaphson <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200) {
    i <- 0
    cur_beta <- start
    stuff <- logit_func(X, y, cur_beta)
@@ -170,9 +178,36 @@ NewtonRaphson <- function(X, y, logit_func, start, tol=1e-10, maxiter = 43) {
 }
 
 coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
-ans <- NewtonRaphson(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL )
+```
+
+
+```{r, error = TRUE, echo = FALSE}
+NewtonRaphson_0 <- function(X, y, logit_func, start, tol=1e-10, maxiter = 43) {
+   i <- 0
+   cur_beta <- start
+   stuff <- logit_func(X, y, cur_beta)
+   asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+   res <- c(i, stuff$loglik, asc_dir_check, cur_beta)
+   prevloglik <- -Inf # To make sure it iterates
+   
+   while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+     i <- i + 1
+     prevloglik <- stuff$loglik
+     prev_beta <- cur_beta
+     cur_beta <- prev_beta - (solve(stuff$Hess) %*% stuff$grad) #update beta
+     stuff <- logit_func(X, y, cur_beta) #update log likelihood, gradient, Hessia
+     asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+     res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
+     colnames(res) <- c("Number_of_trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
+   }
+   return(res)
+}
+
+ans <- NewtonRaphson_0(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL )
 ans %>% kbl(caption = "Newton Raphson result with 31 parameters") %>% 
    kable_styling(font_size = 8, latex_options = "HOLD_position")
+
+ans <- NewtonRaphson(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL )
 ```
 
 \newpage
@@ -295,13 +330,19 @@ ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>%
 
 ```
 
+
+
 ## Modified Newton Raphson with all 31 parameters
 
-```{r}
+```{r, error = TRUE}
 logisticstuff <- function(X, y, beta) {
   p <- exp(X%*%beta) / (1 + exp(X%*%beta)) %>% as.vector()
+
   for (i in 1:length(p)) {
     if (p[i] == 1) {
+      if (sum(is.na(p) == TRUE) > 0) {
+        stopQuietly()
+      }
       p[i] <- 1-2e-8
     }
   }
@@ -315,7 +356,66 @@ logisticstuff <- function(X, y, beta) {
 X <- model.matrix(diagnosis~., training_df_31p)
 y <- as.matrix(training_df$diagnosis)
 
-NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) {
+NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200) {
+   i <- 0
+   cur_beta <- start
+   stuff <- logit_func(X, y, cur_beta)
+   asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+   res <- c(i, stuff$loglik, asc_dir_check, cur_beta)
+   prevloglik <- -Inf # To make sure it iterates
+   lambda <- 1 #initial random lambda
+   
+   while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+      i <- i + 1
+      prev_beta <- cur_beta
+      
+      #checking if direction is ascent. If not, transform Hessian into negative definite.
+      if (asc_dir_check < 0) {
+         stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
+      }
+      
+      else {
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
+      }
+      
+      cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+      stuff2 <- logit_func(X, y, cur2_beta)
+      
+      #condition check before step halving process
+      if (stuff2$loglik > prevloglik) {
+         cur_beta = cur2_beta
+         stuff = stuff2
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+      }
+      #step halving process
+      else {
+         repeat {
+         lambda = lambda/2
+         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, cur_beta)
+         if (stuff$loglik > prevloglik) {
+         cur_beta = cur_beta
+         stuff = stuff
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         }
+         break}
+         }
+      res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
+      colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
+   }
+   return(res)
+}
+
+coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
+```
+
+```{r, error = TRUE, echo = FALSE}
+NewtonRaphson_mod_0 <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) {
    i <- 0
    cur_beta <- start
    stuff <- logit_func(X, y, cur_beta)
@@ -371,13 +471,14 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) 
    return(res)
 }
 
-coef <- rep(0,ncol(X)) # Randomly assigned coefficients (starting point)
-  
-ans <- NewtonRaphson_mod(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL ) 
+ans <- NewtonRaphson_mod_0(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL) 
 ans %>% kbl(caption = "Newton Raphson result with 31 parameters") %>% 
    kable_styling(font_size = 8, latex_options = "HOLD_position")
+  
+ans <- NewtonRaphson_mod(X, y, logisticstuff, coef) %>% data.frame() %>% `rownames<-`( NULL) 
 
 ```
+
 
 ## Conundrum:
 
