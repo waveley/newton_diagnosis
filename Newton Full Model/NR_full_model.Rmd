@@ -123,7 +123,7 @@ ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>%
 
 
 ```{r, echo = FALSE}
-cat("Fitted glm model Beta0:",-3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
+cat("Fitted glm model Beta0:",3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
 ```
 
 \newpage
