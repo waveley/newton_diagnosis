@@ -236,9 +236,9 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
    cur_beta <- start
    stuff <- logit_func(X, y, cur_beta)
    asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+   lambda <- 1 #initial random lambda
    res <- c(i, stuff$loglik, asc_dir_check, cur_beta)
    prevloglik <- -Inf # To make sure it iterates
-   lambda <- 1 #initial random lambda
    
    while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
       i <- i + 1
@@ -271,8 +271,8 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
       #step halving process
       else {
          repeat {
-         lambda2 = lambda/2
-         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         lambda = lambda/2
+         cur_beta = prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, cur_beta)
          if (stuff$loglik > prevloglik) {
          cur_beta = cur_beta
@@ -355,7 +355,7 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) 
       #step halving process
       else {
          repeat {
-         lambda2 = lambda/2
+         lambda = lambda/2
          cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, cur_beta)
          if (stuff$loglik > prevloglik) {
