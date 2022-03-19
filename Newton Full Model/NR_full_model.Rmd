@@ -241,49 +241,48 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
    lambda <- 1 #initial random lambda
    
    while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
-   i <- i + 1
-   prev_beta <- cur_beta
-   
-   #checking if direction is ascent. If not, transform Hessian into negative definite.
-   if (asc_dir_check < 0) {
-      stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
-      prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, prev_beta)
-      prevloglik <- stuff$loglik
-   }
-   
-   else {
-      prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, prev_beta)
-      prevloglik <- stuff$loglik
-   }
-   
-   cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-   stuff2 <- logit_func(X, y, cur2_beta)
-   
-   #condition check before step halving process
-   if (stuff2$loglik > prevloglik) {
-      cur_beta = cur2_beta
-      stuff = stuff2
-      asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
-   }
-   
-   #step halving process
-   else {
-      repeat {
-      lambda2 = lambda/2
-      cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, cur_beta)
-      if (stuff$loglik > prevloglik) {
-      cur_beta = cur_beta
-      stuff = stuff
-      asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
-      }
-      break}
+      i <- i + 1
+      prev_beta <- cur_beta
+      
+      #checking if direction is ascent. If not, transform Hessian into negative definite.
+      if (asc_dir_check < 0) {
+         stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
       }
       
-   res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
-   colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:4))
+      else {
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
+      }
+      
+      cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+      stuff2 <- logit_func(X, y, cur2_beta)
+      
+      #condition check before step halving process
+      if (stuff2$loglik > prevloglik) {
+         cur_beta = cur2_beta
+         stuff = stuff2
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+      }
+      
+      #step halving process
+      else {
+         repeat {
+         lambda2 = lambda/2
+         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, cur_beta)
+         if (stuff$loglik > prevloglik) {
+         cur_beta = cur_beta
+         stuff = stuff
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         }
+         break}
+         }
+      res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
+      colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:4))
    }
    return(res)
 }
@@ -326,49 +325,48 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21) 
    lambda <- 1 #initial random lambda
    
    while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
-   i <- i + 1
-   prev_beta <- cur_beta
-   
-   #checking if direction is ascent. If not, transform Hessian into negative definite.
-   if (asc_dir_check < 0) {
-      stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
-      prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, prev_beta)
-      prevloglik <- stuff$loglik
-   }
-   
-   else {
-      prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, prev_beta)
-      prevloglik <- stuff$loglik
-   }
-   
-   cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
-   stuff2 <- logit_func(X, y, cur2_beta)
-   
-   #condition check before step halving process
-   if (stuff2$loglik > prevloglik) {
-      cur_beta = cur2_beta
-      stuff = stuff2
-      asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
-   }
-   
-   #step halving process
-   else {
-      repeat {
-      lambda2 = lambda/2
-      cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
-      stuff <- logit_func(X, y, cur_beta)
-      if (stuff$loglik > prevloglik) {
-      cur_beta = cur_beta
-      stuff = stuff
-      asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
-      }
-      break}
+      i <- i + 1
+      prev_beta <- cur_beta
+      
+      #checking if direction is ascent. If not, transform Hessian into negative definite.
+      if (asc_dir_check < 0) {
+         stuff$Hess = stuff$Hess - (max(stuff$Hess) + 5) 
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
       }
       
-   res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
-   colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
+      else {
+         prev_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, prev_beta)
+         prevloglik <- stuff$loglik
+      }
+      
+      cur2_beta <- prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
+      stuff2 <- logit_func(X, y, cur2_beta)
+      
+      #condition check before step halving process
+      if (stuff2$loglik > prevloglik) {
+         cur_beta = cur2_beta
+         stuff = stuff2
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+      }
+      
+      #step halving process
+      else {
+         repeat {
+         lambda2 = lambda/2
+         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         stuff <- logit_func(X, y, cur_beta)
+         if (stuff$loglik > prevloglik) {
+         cur_beta = cur_beta
+         stuff = stuff
+         asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         }
+         break}
+         }
+      res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
+      colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
    }
    return(res)
 }
