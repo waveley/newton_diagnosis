@@ -123,7 +123,7 @@ ans %>% kbl(caption = "Newton Raphson result with 5 parameters") %>%
 
 
 ```{r, echo = FALSE}
-cat("True Beta0:",-3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
+cat("Fitted glm model Beta0:",-3.2,",","Beta1:", -11.096,",", "Beta2:",0.270,",","Beta3:", 1.359,",","Beta4:", 0.037)
 ```
 
 \newpage
@@ -202,7 +202,7 @@ cat(c("\\begin{table}[!htb]
     "\\end{minipage}%
     \\begin{minipage}{.5\\linewidth}
       \\centering
-        \\caption{True coefficients of 31 parameters}",
+        \\caption{Fitted glm model coefficients of 31 parameters}",
         t2,
     "\\end{minipage} 
 \\end{table}"
