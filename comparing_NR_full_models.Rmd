@@ -36,7 +36,7 @@ dat <- bc %>% select(-id) %>%
 Next we will break the data into the test and train sets. The split will be 80-20. 
 ```{r data partition}
 partition <- function(p, data){
-  set.seed(100)
+  set.seed(5)
   # generating a probability value
   part_p = runif(nrow(data), min = 0, max = 1)
   # assigning partition id based on probability value
@@ -155,8 +155,8 @@ beta_init <- rep(0.0001, 31) %>% as.matrix()
 rerun_NR <- function(beta_init){
   # calling the function 
   ans_w <- NewtonRaphson_w(
-        list(x = tst_data %>% select(-y) %>% as.matrix(), 
-         y = tst_data %>% select(y) %>% as.matrix()),
+        list(x = trn_data %>% select(-y) %>% as.matrix(), 
+         y = trn_data %>% select(y) %>% as.matrix()),
          logistic_stuff, 
          beta_init)
   
@@ -253,7 +253,7 @@ NewtonRaphson_a <- function(dat,  start, tol = 1e-8, maxiter = 200){
 #Running the algorithm with random starting values 
 
 betavec = c(rep(0.0001, 31))
-ans0.0001 <- NewtonRaphson_a(tst_data, betavec)
+ans0.0001 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
 amy_est_0.0001 <- data.frame(ans0.0001) %>%
@@ -272,7 +272,7 @@ It will also be interesting to look at the stability depending on initial values
 
 ```{r}
 betavec = c(rep(0.001, 31))
-ans0.001 <- NewtonRaphson_a(tst_data, betavec)
+ans0.001 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
 amy_est_0.001 <- data.frame(ans0.001) %>%
@@ -287,7 +287,7 @@ amy_est_0.001 <- data.frame(ans0.001) %>%
 
 
 betavec = c(rep(0.01, 31))
-ans0.01 <- NewtonRaphson_a(tst_data, betavec)
+ans0.01 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
 amy_est_0.01 <- data.frame(ans0.01) %>%
@@ -307,8 +307,8 @@ amy_est_0.01 <- data.frame(ans0.01) %>%
 ### Base R glm 
 
 ```{r message=FALSE, warning=FALSE}
-# tst_data <- tst_data[c(1:455),]
-glm_fit <- glm(y~., data=tst_data, family = "binomial")
+# trn_data <- trn_data[c(1:455),]
+glm_fit <- glm(y~., data=trn_data, family = "binomial")
 result_glm <- summary(glm_fit)
 
 glm_est <- glm_fit %>% broom::tidy() %>% 
@@ -322,10 +322,104 @@ glm_est <- glm_fit %>% broom::tidy() %>%
 
 ```{r}
 library(glmnet)
-xdat = as.matrix(tst_data %>% select(-y))
-glmnet_fit <- glmnet(x = xdat, y = tst_data$y, family="binomial", lambda = 0)
+xdat = as.matrix(trn_data %>% select(-y))
+glmnet_fit <- glmnet(x = xdat, y = trn_data$y, family="binomial", lambda = 0)
 glmnet_est <- as.vector(coef(glmnet_fit)) %>% round(3) 
 ```
+
+### Jimmy's Method (LASSO) but lambda = 0
+
+```{r}
+# logistic function
+logistic <- function(x) 1 / (1 + exp(-x))
+
+# shrinkage function
+S <- function(beta, gamma) {
+  if(abs(beta) <= gamma) {
+    0
+  } else if(beta > 0) {
+    beta - gamma
+  } else {
+    beta + gamma
+  }
+}
+
+# probability adjustment function
+p_adj <- function(p, epsilon) {
+  if (p < epsilon) {
+    0
+  } else if(p > 1 - epsilon) {
+    1
+  } else {
+    p
+  }
+}
+
+# weight adjustment function
+w_adj <- function(p, epsilon) {
+  if ((p < epsilon) | (p > 1 - epsilon)) {
+    epsilon
+  } else {
+    p * (1 - p)
+  }
+}
+
+set.seed(1)
+epsilon <- 10^(-5)
+
+n    <- nrow(trn_data)
+X    <- trn_data[ , -c(1)]
+X    <- as.matrix(cbind(rep(1, n), X))
+y    <- trn_data$y
+
+lambda <- 0 # (max(t(X) %*% y) / n)
+
+# initialize parameters
+beta <- rep(0, ncol(X))
+p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
+w <- map_dbl(p, w_adj, epsilon)
+z <- X %*% beta + (y - p) / w
+
+terminate <- 0
+iter <- 1
+while(terminate < 1) {
+
+  beta_old <- beta
+  # initially go through all parameters
+  K <- 1:ncol(X)
+  #if(iter > 1) {
+  #  K <- which(beta > 0)
+  #}
+
+  for(k in K) {
+    x_k    <- X[ , k]
+    x_notk <- X[ , -k]
+    b_notk <- beta[-k]
+  
+    # un-penalized coefficient update
+    b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+    # shrinkage update
+    b_k      <- S(b_k_temp, lambda / mean(w * x_k^2))
+    
+    # update beta vector along with other parameters
+    beta[k] <- b_k
+    #p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
+    #w <- map_dbl(p, w_adj, epsilon)
+    #z <- X %*% beta + (y - p) / w
+  }
+
+  iter <- iter + 1
+
+  if(iter == 1000 | max(abs(beta - beta_old)) < 10^-10) {
+    print(iter)
+    terminate <- 1
+  }
+
+}
+
+
+```
+
 
 
 ## Combining Results 
@@ -341,8 +435,10 @@ combine_res %>%
   mutate(
     glm_est = round(glm_est,3),
     w_0.0001 = round(w_0.0001,3),
-    w_0.001 = round(w_0.001, 3)
+    w_0.001 = round(w_0.001, 3),
+    j_est = round(beta,3)
   ) %>% 
+  mutate(term = c(0:30)) %>% 
   knitr::kable() 
 ```
 
