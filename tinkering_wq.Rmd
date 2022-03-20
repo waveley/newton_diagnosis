@@ -35,13 +35,17 @@ bc %>%
 tbl_summary(bc, by = diagnosis)
 ```
 
+We want our outcome variable to be binary. Let's create a new outcome variable, `bin_out`, which will be 1 if `diagnosis == 'M'` and 0 if `diagnosis == 'B'.
+
 ```{r}
 bc <- bc %>% mutate(bin_out = ifelse(diagnosis == "M", 1, 0)) %>% relocate(bin_out)
 ```
 
-## Logistic Function
+## Full Model
 
-The likelihood function is defined as follows:
+First, we want to establish logistic model using all variables in the dataset. We will do this by performing a Newton Raphson optimization in order to find the MLEs of the beta coefficients.
+
+The likelihood function for a logistic model is defined as follows:
 
 $$
 f(\beta_0, \beta_1,...,\beta_{30}) = \sum_{i=1}^n \left(Y_i\left(\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}\right) - \log(1+e^{\left(\beta_0 + \sum_{j=1}^{30} \beta_jx_{ij}\right)}\right)
@@ -127,9 +131,9 @@ logistic_stuff <- function(dat, beta){
 }
 ```
 
-## Newton-Raphson Algorithm
+### Newton-Raphson Algorithm
 
-Now, let's write a Newton-Raphson algorithm to find the beta coefficients that maximize likelihood. 
+Now, let's write a Newton-Raphson algorithm to find the beta coefficients that maximize this function's likelihood. 
 
 The unmodified estimate of $\theta_i = \left[\begin{array}{l} \beta_0 \\ \vdots \\ \beta_30 \end{array}\right]$ at each step $i$ of the Newton Raphson algorithm is: 
 $$
@@ -228,9 +232,9 @@ if (sum(is.na(ans[nrow(ans),])) == 0) {
 tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) %>% knitr::kable()
 ```
 
-## Lasso
+## Logistic-Lasso Model
 
-Now, let's try lasso. 
+Now, we want to establish a logistic-lasso model, in which we want to minimize the weighted residual sum of squares of the logistic regression.
 
 $$
 \begin{aligned}
@@ -280,8 +284,6 @@ w_i &= \tilde{p_i}(x_i)(1-\tilde{p_i}(x_i))
 \\
 \tilde{\beta_{30}}
 \end{matrix}\right)\right)}
-\\
-\min_{(\beta_0, \beta_1, \dots, \beta_{30})}L(\beta_0, \beta_1, \dots, \beta_{30}) &= \left\{-l(\beta_0, \beta_1, \dots, \beta_{30}) + \lambda \sum_{j=0}^{30}|\beta_j|\right\}
 \end{aligned}
 $$
 
@@ -311,17 +313,27 @@ quad_loglik <- function(dat, beta){ # beta vector includes beta_0
 }
 ```
 
-
 ```{r}
 beta_init <- rep(0.001, 31) %>% as.matrix()
 
-test1 <- quad_loglik(
+test_quad <- quad_loglik(
   list(x = bc[,-c(1,2, 3)] %>% as.matrix(), 
        y = bc$bin_out %>% as.matrix()), 
   beta = beta_init)
 
-test1
+test_quad
 ```
+
+
+### Lasso Minimization
+
+We want to achieve the following minimization:
+
+$$
+\begin{aligned}
+\min_{(\beta_0, \beta_1, \dots, \beta_{30})}L(\beta_0, \beta_1, \dots, \beta_{30}, \lambda) &= \left\{-l(\beta_0, \beta_1, \dots, \beta_{30}) + \lambda \sum_{j=0}^{30}|\beta_j|\right\}
+\end{aligned}
+$$
 
 
 
