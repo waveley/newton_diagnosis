@@ -9,6 +9,13 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 source("shared_code/setup.R")
+
+#library(tidymodels)
+library(tidyverse)
+library(pROC)
+library(kableExtra)
+library(knitr)
+library(xtable)
 ```
 
 
@@ -87,9 +94,20 @@ Modifications:
 
 Data Preprocess 
 ```{r}
+set.seed(7777)
 dat <- bc %>% select(-id) %>%
   rename(y = diagnosis) %>%
   mutate(y = ifelse(y=="B", 0, 1))
+
+
+#split <- initial_split(dat, prop = 0.8)
+
+training_df <- dat # split %>% training()
+
+#testing_df <- split %>% testing()
+
+
+
 ```
 
 Functions 
@@ -160,7 +178,7 @@ NewtonRaphson <- function(dat,  start, tol = 1e-11, maxiter = 200){
 }
 #Running the algorithm with random starting values 
 betavec = c(rep(0.01, 31))
-ans <- NewtonRaphson(dat,betavec)
+ans <- NewtonRaphson(training_df, betavec)
 
 ```
 
@@ -190,15 +208,15 @@ data.frame(ans) %>%
 
 ## Comparing to glm model 
 
-Data Cleaning 
-```{r}
-
-```
-
 Model Implementation 
-```{r}
-glm_fit <- glm(y~., data=dat)
-summary(glm_fit)
+```{r message=FALSE, warning=FALSE}
+glm_fit <- glm(y~., data=training_df, family = "binomial")
+result_glm <- summary(glm_fit)
+
+glm_fit %>% broom::tidy() %>% 
+  select(term, estimate) %>% 
+  mutate(estimate = round(estimate, 3)) %>% 
+  knitr::kable()
 ```
 
 
