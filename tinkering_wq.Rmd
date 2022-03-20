@@ -89,6 +89,8 @@ $$
 \end{aligned}
 $$
 
+Let's create a function that produces the log-likelihood, gradient vector, and hessian matrix, given a dataset and beta vector:
+
 ```{r}
 rep_col <- function(x, n){
   matrix(rep(x, each = n), ncol = n, byrow = TRUE)
@@ -124,6 +126,31 @@ logistic_stuff <- function(dat, beta){
   ))
 }
 ```
+
+## Newton-Raphson Algorithm
+
+Now, let's write a Newton-Raphson algorithm to find the beta coefficients that maximize likelihood. 
+
+The unmodified estimate of $\theta_i = \left[\begin{array}{l} \beta_0 \\ \vdots \\ \beta_30 \end{array}\right]$ at each step $i$ of the Newton Raphson algorithm is: 
+$$
+\theta_i = \theta_{i-1} - [\triangledown^2f(\theta_{i-1})]^{-1}\triangledown f(\theta_{i-1})
+$$
+
+In this modified Newton Raphson algorithm, we want to first ensure that the $\triangledown^2f(\theta_{i-1})$ is either negative definite or replaced with a similar matrix that is negative definite. To do this, we will update the algorithm to be as follows:
+
+$$
+\theta_i = \theta_{i-1} - [\triangledown^2f(\theta_{i-1}) - k I]^{-1}\triangledown f(\theta_{i-1}),
+$$
+
+where $I$ is the identity matrix and $k$ is a constant that allows $\triangledown^2f(\theta_{i-1}) - kI$ to be negative definite. If $\triangledown^2f(\theta_{i-1})$ is already negative definite, $k$ will be 0.
+
+Next, we want to add step-halving into our algorithm. We will proceed as follows:
+
+$$
+\theta_i = \theta_{i-1} - \frac{1}{2^j}[\triangledown^2f(\theta_{i-1}) - k I]^{-1}\triangledown f(\theta_{i-1}),
+$$
+
+where $j$ is chosen in a stepwise fashion, until $f(\theta_i) > f(\theta_{i-1})$.
 
 ```{r}
 
@@ -168,6 +195,8 @@ NewtonRaphson <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
 }
 ```
 
+Let's start with all beta coefficients being 0.001.
+
 ```{r, warning=FALSE, message=FALSE}
 
 beta_init <- rep(0.001, 31) %>% as.matrix()
@@ -182,9 +211,7 @@ ans <- NewtonRaphson(
        y = bc$bin_out %>% as.matrix()),
        logistic_stuff, 
        beta_init)
-ans
 ```
-
 
 The beta estimates are as follows:
 
@@ -200,6 +227,23 @@ if (sum(is.na(ans[nrow(ans),])) == 0) {
 
 tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) %>% knitr::kable()
 ```
+
+## Lasso
+
+Now, let's try lasso. 
+
+$$
+\min_{(\beta_0, \beta_1, \dots, \beta_{30})}L(\beta_0, \beta_1, \dots, \beta_30) = \left\{-l(\beta_0, \beta_1, \dots, \beta_{30}) + \lambda \sum_{j=0}^{30}|\beta_j|\right\}
+\\
+\lambda_{max} = \sum_{j=1}^{30} |\beta_j|
+$$
+
+
+
+```{r}
+beta_est %>% abs() %>% sum()
+```
+
 
 
 
