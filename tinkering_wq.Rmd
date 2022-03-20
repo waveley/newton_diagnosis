@@ -233,15 +233,92 @@ tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) %>% knitr::kable(
 Now, let's try lasso. 
 
 $$
-\min_{(\beta_0, \beta_1, \dots, \beta_{30})}L(\beta_0, \beta_1, \dots, \beta_30) = \left\{-l(\beta_0, \beta_1, \dots, \beta_{30}) + \lambda \sum_{j=0}^{30}|\beta_j|\right\}
+\begin{aligned}
+f(\beta_0, \beta_1, \dots, \beta_{30}) &\approx -\frac{1}{2n}\sum_{i=1}^n w_i\left(z_i -
+\bf{(1 \quad x_i)}
+\left(\begin{matrix}
+\beta_1
 \\
-\lambda_{max} = \sum_{j=1}^{30} |\beta_j|
+\beta_2
+\\
+\vdots
+\\
+\beta_{30}
+\end{matrix}\right)
+\right)^2 + C(\tilde{\beta_0}, \tilde{\beta_1}, \dots, \tilde{\beta_{30}})
+\\
+z_i &= (\bf{1 \quad x_i})
+\left(\begin{matrix}
+\tilde{\beta_1}
+\\
+\tilde{\beta_2}
+\\
+\vdots
+\\
+\tilde{\beta_{30}}
+\end{matrix}\right) 
++ \frac{y_i - \tilde{p_i}(x_i)}{\tilde{p_i}(x_i)(1-\tilde{p_i}(x_i))}
+\\
+w_i &= \tilde{p_i}(x_i)(1-\tilde{p_i}(x_i))
+\\
+\tilde{p_i} &= \frac{\exp\left((\bf{1 \quad x_i})
+\left(\begin{matrix}
+\tilde{\beta_1}
+\\
+\tilde{\beta_2}
+\\
+\vdots
+\\
+\tilde{\beta_{30}}
+\end{matrix}\right)\right)}{1 + \exp\left((\bf{1 \quad x_i})
+\left(\begin{matrix}
+\tilde{\beta_1}
+\\
+\tilde{\beta_2}
+\\
+\vdots
+\\
+\tilde{\beta_{30}}
+\end{matrix}\right)\right)}
+\\
+\min_{(\beta_0, \beta_1, \dots, \beta_{30})}L(\beta_0, \beta_1, \dots, \beta_{30}) &= \left\{-l(\beta_0, \beta_1, \dots, \beta_{30}) + \lambda \sum_{j=0}^{30}|\beta_j|\right\}
+\end{aligned}
 $$
 
 
+### Quadratic Approximation
 
 ```{r}
-beta_est %>% abs() %>% sum()
+quad_log_stuff <- function(dat, beta){
+  
+  x <- dat[[1]] %>% unname() %>% as.matrix()
+  y <- dat[[2]] %>% unname() %>% as.matrix()
+  
+  x_with_1 <- cbind(1, x) 
+    
+  u <- x_with_1 %*% beta
+ # return(u)
+  
+  expu <- exp(u)
+  
+  loglik <- sum(y*u - log(1 + expu))
+
+  p <- expu/(1 + expu)
+  #  return(p)
+  # return(p)
+  grad <- t(x_with_1) %*% (y - p)
+  
+  i_mat <- diag(nrow(p))
+  diag(i_mat) <- p*(1 - p)
+
+  hess <- -(t(x_with_1) %*% i_mat %*% x_with_1)
+  return(list(
+    loglik = loglik,
+    grad = grad,
+    hess = hess
+  ))
+  
+}
 ```
 
 
