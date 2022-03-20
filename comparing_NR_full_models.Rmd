@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 source("shared_code/setup.R")
 
-#library(tidymodels)
 library(tidyverse)
 library(pROC)
 library(kableExtra)
@@ -19,7 +18,12 @@ library(xtable)
 ```
 
 
-## Data import 
+## Data import + Cleaning 
+Cleaning involves
+
+- removing the id variable 
+- re-factoring the outcome variable `diagnosis` to be 0 if B and ` if M. Then this variable is re-names to `y`. 
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 
@@ -28,7 +32,8 @@ dat <- bc %>% select(-id) %>%
   mutate(y = ifelse(y=="B", 0, 1))
 ```
 
-
+## Test + Train 
+Next we will break the data into the test and train sets. The split will be 80-20. 
 ```{r data partition}
 partition <- function(p, data){
   set.seed(100)
@@ -57,13 +62,17 @@ tst_data <- # this will come back into play for test error
 ```
 
 
-```{r}
-intial_beta_val = 0.0001
-```
 
+## Comparing all Methods
 
-### 
+We will be comparing:
 
+- Waveley's Method
+- Amy's Method
+- base R glm
+- glmnet (lambda = 0)
+
+### Waveley's Method
 ```{r}
 rep_col <- function(x, n){
   matrix(rep(x, each = n), ncol = n, byrow = TRUE)
@@ -141,27 +150,38 @@ NewtonRaphson_w <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
   return(res)
 }
 
-beta_init <- rep(intial_beta_val, 31) %>% as.matrix()
+beta_init <- rep(0.0001, 31) %>% as.matrix()
 
-ans_w <- NewtonRaphson_w(
-      list(x = tst_data %>% select(-y) %>% as.matrix(), 
-       y = tst_data %>% select(y) %>% as.matrix()),
-       logistic_stuff, 
-       beta_init)
-
-if (sum(is.na(ans_w[nrow(ans_w),])) > 0) {
-  beta_est <- ans_w[nrow(ans_w) - 1, -c(1,2)]
+rerun_NR <- function(beta_init){
+  # calling the function 
+  ans_w <- NewtonRaphson_w(
+        list(x = tst_data %>% select(-y) %>% as.matrix(), 
+         y = tst_data %>% select(y) %>% as.matrix()),
+         logistic_stuff, 
+         beta_init)
+  
+  # organixing the results 
+  if (sum(is.na(ans_w[nrow(ans_w),])) > 0) {
+    beta_est <- ans_w[nrow(ans_w) - 1, -c(1,2)]
+  }
+  
+  if (sum(is.na(ans_w[nrow(ans_w),])) == 0) {
+    beta_est <- ans_w[nrow(ans_w), -c(1,2)]
+  }
+  # results 
+  waveley_est<- tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) #%>% knitr::kable()
+  return(waveley_est)
 }
 
-if (sum(is.na(ans_w[nrow(ans_w),])) == 0) {
-  beta_est <- ans_w[nrow(ans_w), -c(1,2)]
-}
+beta_init <- rep(0.0001, 31) %>% as.matrix()
+w_0.0001 <- rerun_NR(beta_init)$beta_estimates
 
-waveley_est<- tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) #%>% knitr::kable()
+beta_init <- rep(0.001, 31) %>% as.matrix()
+w_0.001 <- rerun_NR(beta_init)$beta_estimates
 
 ```
 
-### 
+### Amy's Method
 
 ```{r}
 loglike_func <- function(dat, betavec){
@@ -232,24 +252,59 @@ NewtonRaphson_a <- function(dat,  start, tol = 1e-8, maxiter = 200){
 }
 #Running the algorithm with random starting values 
 
-betavec = c(rep(intial_beta_val, 31))
-ans <- NewtonRaphson_a(tst_data, betavec)
+betavec = c(rep(0.0001, 31))
+ans0.0001 <- NewtonRaphson_a(tst_data, betavec)
 
 # beta values 
-amy_est <- data.frame(ans) %>%
+amy_est_0.0001 <- data.frame(ans0.0001) %>%
   select(-step, -loglik, -i) %>%
   filter(row_number() == n()) %>%
   pivot_longer(
     cols = everything(),
     names_to = "term",
-    values_to = "amy_est"
+    values_to = "a_0.0001"
   ) %>% 
-  mutate(`amy_est` = round(`amy_est`,3)) 
+  mutate(`a_0.0001` = round(`a_0.0001`,3)) 
+
+```
+
+It will also be interesting to look at the stability depending on initial values. 
+
+```{r}
+betavec = c(rep(0.001, 31))
+ans0.001 <- NewtonRaphson_a(tst_data, betavec)
+
+# beta values 
+amy_est_0.001 <- data.frame(ans0.001) %>%
+  select(-step, -loglik, -i) %>%
+  filter(row_number() == n()) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "term",
+    values_to = "a_0.001"
+  ) %>% 
+  mutate(`a_0.001` = round(`a_0.001`,3)) 
+
+
+betavec = c(rep(0.01, 31))
+ans0.01 <- NewtonRaphson_a(tst_data, betavec)
+
+# beta values 
+amy_est_0.01 <- data.frame(ans0.01) %>%
+  select(-step, -loglik, -i) %>%
+  filter(row_number() == n()) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "term",
+    values_to = "a_0.01"
+  ) %>% 
+  mutate(`a_0.01` = round(`a_0.01`,3)) 
 
 ```
 
 
-### 
+
+### Base R glm 
 
 ```{r message=FALSE, warning=FALSE}
 # tst_data <- tst_data[c(1:455),]
@@ -263,7 +318,7 @@ glm_est <- glm_fit %>% broom::tidy() %>%
   mutate(term = ifelse(term == "(Intercept)", "intercept", term))
 ```
 
-### 
+### glmnet
 
 ```{r}
 library(glmnet)
@@ -273,16 +328,20 @@ glmnet_est <- as.vector(coef(glmnet_fit)) %>% round(3)
 ```
 
 
-# combining 
+## Combining Results 
+
 ```{r}
-combine_res <- amy_est %>%
+combine_res <- amy_est_0.0001 %>%
+  full_join(amy_est_0.001) %>% 
+  full_join(amy_est_0.01) %>% 
   full_join(glm_est) %>%
   mutate(glmnet_est= glmnet_est) 
 
 combine_res %>%
   mutate(
-    glm_est = round(glm_est,2),
-    waveley_est = waveley_est$beta_estimates
+    glm_est = round(glm_est,3),
+    w_0.0001 = round(w_0.0001,3),
+    w_0.001 = round(w_0.001, 3)
   ) %>% 
   knitr::kable() 
 ```
