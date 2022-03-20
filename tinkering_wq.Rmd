@@ -237,9 +237,9 @@ $$
 f(\beta_0, \beta_1, \dots, \beta_{30}) &\approx -\frac{1}{2n}\sum_{i=1}^n w_i\left(z_i -
 \bf{(1 \quad x_i)}
 \left(\begin{matrix}
-\beta_1
+\beta_0
 \\
-\beta_2
+\beta_1
 \\
 \vdots
 \\
@@ -249,9 +249,9 @@ f(\beta_0, \beta_1, \dots, \beta_{30}) &\approx -\frac{1}{2n}\sum_{i=1}^n w_i\le
 \\
 z_i &= (\bf{1 \quad x_i})
 \left(\begin{matrix}
-\tilde{\beta_1}
+\tilde{\beta_0}
 \\
-\tilde{\beta_2}
+\tilde{\beta_1}
 \\
 \vdots
 \\
@@ -261,20 +261,20 @@ z_i &= (\bf{1 \quad x_i})
 \\
 w_i &= \tilde{p_i}(x_i)(1-\tilde{p_i}(x_i))
 \\
-\tilde{p_i} &= \frac{\exp\left((\bf{1 \quad x_i})
+\tilde{p_i}(x_i) &= \frac{\exp\left((\bf{1 \quad x_i})
 \left(\begin{matrix}
-\tilde{\beta_1}
+\tilde{\beta_0}
 \\
-\tilde{\beta_2}
+\tilde{\beta_1}
 \\
 \vdots
 \\
 \tilde{\beta_{30}}
 \end{matrix}\right)\right)}{1 + \exp\left((\bf{1 \quad x_i})
 \left(\begin{matrix}
-\tilde{\beta_1}
+\tilde{\beta_0}
 \\
-\tilde{\beta_2}
+\tilde{\beta_1}
 \\
 \vdots
 \\
@@ -285,40 +285,42 @@ w_i &= \tilde{p_i}(x_i)(1-\tilde{p_i}(x_i))
 \end{aligned}
 $$
 
-
-### Quadratic Approximation
+### Quadratic Approximation to the Log-likelihood
 
 ```{r}
-quad_log_stuff <- function(dat, beta){
+
+quad_loglik <- function(dat, beta){ # beta vector includes beta_0
   
   x <- dat[[1]] %>% unname() %>% as.matrix()
   y <- dat[[2]] %>% unname() %>% as.matrix()
   
+  
   x_with_1 <- cbind(1, x) 
     
-  u <- x_with_1 %*% beta
- # return(u)
-  
+  u <- x_with_1 %*% beta 
   expu <- exp(u)
   
-  loglik <- sum(y*u - log(1 + expu))
+  p <- expu/(1 + expu) # estimated outcome probability
+  w_i <- p * (1 - p)  # weights
+    
+  z_i <- x_with_1 %*% beta + (y - p)/(p * (1 - p)) # working response
 
-  p <- expu/(1 + expu)
-  #  return(p)
-  # return(p)
-  grad <- t(x_with_1) %*% (y - p)
+  loglik <- -(1/(2*nrow(x))) * t(w_i) %*% ((z_i - x_with_1 %*% beta)^2)
   
-  i_mat <- diag(nrow(p))
-  diag(i_mat) <- p*(1 - p)
-
-  hess <- -(t(x_with_1) %*% i_mat %*% x_with_1)
-  return(list(
-    loglik = loglik,
-    grad = grad,
-    hess = hess
-  ))
-  
+  return(loglik)
 }
+```
+
+
+```{r}
+beta_init <- rep(0.001, 31) %>% as.matrix()
+
+test1 <- quad_loglik(
+  list(x = bc[,-c(1,2, 3)] %>% as.matrix(), 
+       y = bc$bin_out %>% as.matrix()), 
+  beta = beta_init)
+
+test1
 ```
 
 
