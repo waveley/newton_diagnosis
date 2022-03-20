@@ -164,7 +164,7 @@ cv_function(training = trn_folds, func = ex_func)
 
 When this function is used with our lasso algorithm, each of the five models will have one lambda value associated with it. There's no tuning parameter for linear regression here. I believe the optimal model, and therefore optimal lambda value, will come from the instance with the lowest RMSE. So we will want to update this algorithm to return the lambda value as well. I think this can be achieved through similar means as in the `cv_sets()` function using `do.call()` and the like.
 
-To run Monte Carlo CV, I believe we can build a function like the one below. The current result will need to be cleaned further, but I think this should perform as intended.
+To run Monte Carlo CV, I believe we can build a function like the one below. The current result will need to be cleaned further, but I think this should perform as intended. After getting these results, we choose our optimal lambda and make predictions based on the previously set aside `tst_data` and assess our test error from there.
 
 ```{r monte carlo function}
 monte_carlo <- function(n, data){
@@ -179,6 +179,6 @@ monte_carlo <- function(n, data){
   
   return(mc_res)
 }
-```
 
-After getting these results, we choose our optimal lambda and make predictions based on the previously set aside `tst_data` and assess our test error from there.
+monte_carlo(n = 10, data = trn_data)
+```
