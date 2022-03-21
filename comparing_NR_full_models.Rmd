@@ -59,7 +59,21 @@ tst_data <- # this will come back into play for test error
   part_data %>% 
   filter(part_id == "test") %>% 
   select(-part_id)
+
 ```
+
+I want to only check 3 variables 
+
+```{r}
+cor(trn_data$texture_mean, trn_data$radius_mean)
+cor(trn_data$radius_mean, trn_data$smoothness_mean)
+cor(trn_data$smoothness_mean, trn_data$texture_mean)
+
+trn_data = trn_data %>% 
+  select(y, texture_mean, radius_mean, smoothness_mean)
+head(trn_data)
+```
+
 
 
 
@@ -71,6 +85,7 @@ We will be comparing:
 - Amy's Method
 - base R glm
 - glmnet (lambda = 0)
+- Jimmy's LASSO function with $\lambda = 0$
 
 ### Waveley's Method
 ```{r}
@@ -150,7 +165,6 @@ NewtonRaphson_w <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
   return(res)
 }
 
-beta_init <- rep(0.0001, 31) %>% as.matrix()
 
 rerun_NR <- function(beta_init){
   # calling the function 
@@ -169,14 +183,18 @@ rerun_NR <- function(beta_init){
     beta_est <- ans_w[nrow(ans_w), -c(1,2)]
   }
   # results 
-  waveley_est<- tibble(beta_subscript = seq(0, 30), beta_estimates = beta_est) #%>% knitr::kable()
+  waveley_est<- tibble(beta_subscript = seq(0, (ncol(trn_data)-1)), 
+                       beta_estimates = beta_est) #%>% knitr::kable()
   return(waveley_est)
 }
 
-beta_init <- rep(0.0001, 31) %>% as.matrix()
+beta_init <- rep(0.0001, ncol(trn_data)) %>% as.matrix()
+
+
+beta_init <- rep(0.0001, ncol(trn_data)) %>% as.matrix()
 w_0.0001 <- rerun_NR(beta_init)$beta_estimates
 
-beta_init <- rep(0.001, 31) %>% as.matrix()
+beta_init <- rep(0.001, ncol(trn_data)) %>% as.matrix()
 w_0.001 <- rerun_NR(beta_init)$beta_estimates
 
 ```
@@ -252,7 +270,7 @@ NewtonRaphson_a <- function(dat,  start, tol = 1e-8, maxiter = 200){
 }
 #Running the algorithm with random starting values 
 
-betavec = c(rep(0.0001, 31))
+betavec = c(rep(0.0001, ncol(trn_data)))
 ans0.0001 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
@@ -271,7 +289,7 @@ amy_est_0.0001 <- data.frame(ans0.0001) %>%
 It will also be interesting to look at the stability depending on initial values. 
 
 ```{r}
-betavec = c(rep(0.001, 31))
+betavec = c(rep(0.001, ncol(trn_data)))
 ans0.001 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
@@ -286,7 +304,7 @@ amy_est_0.001 <- data.frame(ans0.001) %>%
   mutate(`a_0.001` = round(`a_0.001`,3)) 
 
 
-betavec = c(rep(0.01, 31))
+betavec = c(rep(0.01, ncol(trn_data)))
 ans0.01 <- NewtonRaphson_a(trn_data, betavec)
 
 # beta values 
@@ -438,7 +456,7 @@ combine_res %>%
     w_0.001 = round(w_0.001, 3),
     j_est = round(beta,3)
   ) %>% 
-  mutate(term = c(0:30)) %>% 
+  mutate(term = c(0:(ncol(trn_data)-1))) %>% 
   knitr::kable() 
 ```
 
