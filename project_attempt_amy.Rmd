@@ -9,6 +9,13 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 source("shared_code/setup.R")
+
+#library(tidymodels)
+library(tidyverse)
+library(pROC)
+library(kableExtra)
+library(knitr)
+library(xtable)
 ```
 
 
@@ -87,9 +94,20 @@ Modifications:
 
 Data Preprocess 
 ```{r}
+set.seed(7777)
 dat <- bc %>% select(-id) %>%
   rename(y = diagnosis) %>%
   mutate(y = ifelse(y=="B", 0, 1))
+
+
+#split <- initial_split(dat, prop = 0.8)
+
+training_df <- dat # split %>% training()
+
+#testing_df <- split %>% testing()
+
+#training_df <- training_df[c(1:455),]
+
 ```
 
 Functions 
@@ -102,7 +120,7 @@ loglike_func <- function(dat, betavec){
   dat_x = unname(as.matrix(dat_temp)) # creating the x matrix 
   
   # finding the pi values 
-  u = dat_x%*%betavec
+  u = dat_x %*% betavec
   pi <- exp(u) / (1+exp(u))
   
   # loglikelihood
@@ -112,9 +130,9 @@ loglike_func <- function(dat, betavec){
   grad <- t(dat_x)%*%(dat$y - pi)
   
   # Hessian 
-  mat_temp = matrix(0, nrow = dim(dat)[1], ncol = dim(dat)[1]) 
-  diag(mat_temp)= pi*(1-pi) 
-  hess = -t(dat_x)%*% mat_temp %*%(dat_x)
+  W = matrix(0, nrow = dim(dat)[1], ncol = dim(dat)[1]) 
+  diag(W)= pi*(1-pi) 
+  hess = -t(dat_x)%*% W %*% (dat_x)
   
   return(list(loglik = loglik, grad = grad, hess = hess))
   
@@ -122,24 +140,26 @@ loglike_func <- function(dat, betavec){
 #loglike_func(dat, betavec = c( rep(0.03, 31)))  # test! 
 
 
-NewtonRaphson <- function(dat,  start, tol = 1e-11, maxiter = 200){
+NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
   i = 0
   cur = start 
   stuff = loglike_func(dat, cur)
-  res <- c(i=0, "loglik" = stuff$loglik,  cur, "step" = 1)
+  res <- c(i=0, "loglik" = stuff$loglik,  "step" = 1, cur)
   prevloglik <- -Inf # To make sure it iterates
   while(i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
     step = 1
     i <- i + 1
     prevloglik <- stuff$loglik
     
-    # ascent direct check 
+    # checking negative definite  
     eigen_vals = eigen(stuff$hess)
-    if(max(eigen_vals$values) <= 0 ){ # we don't want neg def 
+    if(max(eigen_vals$values) <= 0 ){ # check neg def, if not change 
       hess = stuff$hess
-    } else{ # if it is neg def then need to adjust 
+    } else{ # if it is pos def then need to adjust 
       hess = stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
-    }
+    } 
+    
+    
     prev  <- cur
     cur   <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
     stuff <- loglike_func(dat, cur) # log-lik, gradient, Hessian
@@ -148,19 +168,20 @@ NewtonRaphson <- function(dat,  start, tol = 1e-11, maxiter = 200){
     while(stuff$loglik < prevloglik){
       stuff <- loglike_func(dat, prev)
       step  <- step / 2 # this is where half steping happens 
-      cur   <- prev - rep(step, length(prev))*(solve(stuff$hess) %*% stuff$grad)
+      cur   <- prev - step*(solve(stuff$hess) %*% stuff$grad)
       stuff <- loglike_func(dat, cur)
     }
     # Add current values to results matrix
-    res <- rbind(res, c(i, stuff$loglik, cur, step))
+    res <- rbind(res, c(i, stuff$loglik, step, cur))
   }
   
-  colnames(res) <- c("intercept", names(dat[,-1]), "i", "loglik", "step")
+  colnames(res) <- c("i", "loglik",  "step", "intercept", names(dat[,-1]))
   return(res)
 }
 #Running the algorithm with random starting values 
+
 betavec = c(rep(0.01, 31))
-ans <- NewtonRaphson(dat,betavec)
+ans <- NewtonRaphson(training_df, betavec)
 
 ```
 
@@ -174,15 +195,17 @@ data.frame(
 )
 
 # beta values 
-data.frame(ans) %>%
+amy_est <- data.frame(ans) %>%
   select(-step, -loglik, -i) %>%
   filter(row_number() == n()) %>%
   pivot_longer(
     cols = everything(),
-    names_to = "Variables Name",
-    values_to = "Beta Coef"
+    names_to = "term",
+    values_to = "amy_est"
   ) %>% 
-  mutate(`Beta Coef` = round(`Beta Coef`,3)) %>% 
+  mutate(`amy_est` = round(`amy_est`,3)) 
+
+amy_est%>% 
   knitr::kable()
   
 ```
@@ -190,15 +213,42 @@ data.frame(ans) %>%
 
 ## Comparing to glm model 
 
-Data Cleaning 
-```{r}
-
-```
-
 Model Implementation 
-```{r}
-glm_fit <- glm(y~., data=dat)
-summary(glm_fit)
+```{r message=FALSE, warning=FALSE}
+# training_df <- training_df[c(1:455),]
+glm_fit <- glm(y~., data=training_df, family = "binomial")
+result_glm <- summary(glm_fit)
+
+glm_est <- glm_fit %>% broom::tidy() %>% 
+  select(term, estimate) %>% 
+  mutate(glm_est = round(estimate, 3)) %>%
+  select(-estimate) %>% 
+  mutate(term = ifelse(term == "(Intercept)", "intercept", term))
 ```
+
+
+```{r}
+library(glmnet)
+xdat = as.matrix(dat %>% select(-y))
+glmnet_fit <- glmnet(x = xdat, y = dat$y, family="binomial", lambda = 0)
+glmnet_est <- as.vector(coef(glmnet_fit)) %>% round(3) 
+```
+
+
+combining 
+```{r}
+combine_res <- amy_est %>%
+  full_join(glm_est) %>%
+  mutate(glmnet_est= glmnet_est) 
+
+combine_res %>%
+  mutate(
+    glm_est = round(glm_est,2)
+  ) %>% 
+  knitr::kable() 
+```
+
+
+
 
 

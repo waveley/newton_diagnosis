@@ -300,8 +300,9 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
          cur_beta = cur_beta
          stuff = stuff
          asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         break
          }
-         break}
+         }
          }
       res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
       colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:4))
@@ -377,14 +378,15 @@ NewtonRaphson_mod <- function(X, y, logit_func, start, tol=1e-10, maxiter = 200)
       else {
          repeat {
          lambda = lambda/2
-         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         cur_beta = prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, cur_beta)
          if (stuff$loglik > prevloglik) {
          cur_beta = cur_beta
          stuff = stuff
          asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         break
          }
-         break}
+         }
          }
       res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
       colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
@@ -437,14 +439,15 @@ NewtonRaphson_mod_0 <- function(X, y, logit_func, start, tol=1e-10, maxiter = 21
       else {
          repeat {
          lambda = lambda/2
-         cur_beta = prev_beta - lambda2 * (solve(stuff$Hess) %*% stuff$grad)
+         cur_beta = prev_beta - lambda * (solve(stuff$Hess) %*% stuff$grad)
          stuff <- logit_func(X, y, cur_beta)
          if (stuff$loglik > prevloglik) {
          cur_beta = cur_beta
          stuff = stuff
          asc_dir_check <- -t(stuff$grad) %*% solve(stuff$Hess) %*% stuff$grad
+         break
          }
-         break}
+         }
          }
       res <- rbind(res, c(i, stuff$loglik, asc_dir_check, cur_beta))
       colnames(res) <- c("Number of trial", "Log_likelihood", "asc_dir_check", paste0("Beta", 0:30))
@@ -475,5 +478,6 @@ log_likelihood <- t(y) %*% log(p) + t(1-y)  %*% log(1-p)
 cat("log_likelihood:",log_likelihood)
 ```
 
+Logistic regression could be unstable when the classes are well separated, namely when $\beta_i$ in a model is large as it is the case for our logistic model for the cancer data.
 
 
