@@ -454,9 +454,9 @@ combine_res %>%
     glm_est = round(glm_est,3),
     w_0.0001 = round(w_0.0001,3),
     w_0.001 = round(w_0.001, 3),
-    j_est = round(beta,3)
+    #j_est = round(beta,3)
   ) %>% 
-  mutate(term = c(0:(ncol(trn_data)-1))) %>% 
+  #mutate(term = c(0:(ncol(trn_data)-1))) %>% 
   knitr::kable() 
 ```
 
