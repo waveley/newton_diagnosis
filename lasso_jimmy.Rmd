@@ -85,15 +85,18 @@ set.seed(1)
 lambda <- 0 #0.0125
 epsilon <- 10^(-5)
 
+q    <- 30 - 1
 n    <- 1000
-X    <- scale(matrix(rnorm(3 * n), c(n, 3)))
+X    <- scale(matrix(rnorm(q * n), c(n, q)))
 X    <- as.matrix(cbind(rep(1, n), X))
 y    <- 1 * (runif(n) > 0.5)
 
 # initialize parameters
-beta <- rep(0, ncol(X))
+beta <- rep(0.25, ncol(X))
 
-p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
+for(outer in 1:10) {
+
+p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
 w <- map_dbl(p, w_adj, epsilon)
 z <- X %*% beta + (y - p) / w
 
@@ -111,32 +114,51 @@ while(terminate < 1) {
     # un-penalized coefficient update
     b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
     # shrinkage update
-    b_k      <- S(b_k_temp, lambda / mean(w * x_k^2))
+    b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
     # update beta vector along with other parameters
     beta[k] <- b_k
-    #p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
-    #w <- map_dbl(p, w_adj, epsilon)
-    #z <- X %*% beta + (y - p) / w
+    p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+    w <- map_dbl(p, w_adj, epsilon)
+    z <- X %*% beta + (y - p) / w
   }
 
   iter <- iter + 1
 
-  if(iter == 100 | max(abs(beta - beta_old)) < 10^-10) {
+  if(iter == 100 | max(abs(beta - beta_old)) < 10^(-10)) {
     print(iter)
     terminate <- 1
   }
+  
+}
+
+#print(beta)
 
 }
 
 # Estimates from Coordinate Descent
-print(beta)
+#print(beta)
 
 # True estimates from GLM
-as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
+#as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
 
 # True estimates from GLMNET
 fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-10)
-as.vector(fit$beta[ , ncol(fit$beta)])
+#as.vector(fit$beta[ , ncol(fit$beta)])
+
+# results
+results <- tibble(
+    Variable   = 1:length(beta)
+  , Jimmy      = beta
+  , GLM        = as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
+  , GLMNET     = as.vector(fit$beta[ , ncol(fit$beta)])
+  , Difference = abs(Jimmy - GLM)
+  , Change     = (Jimmy - GLM) / GLM
+) %>%
+  filter(Jimmy != 0 | GLMNET != 0)
+
+results %>% knitr::kable()
+
+c(mean(results$Difference[-1]), mean(results$Change[-1]), 1/n)
 ```
 
 ## Test with Actual Data
@@ -146,15 +168,20 @@ set.seed(1)
 epsilon <- 10^(-5)
 
 n    <- nrow(data)
+#X    <- scale(data[ , -c(1, 2)])
 X    <- data[ , -c(1, 2)]
 X    <- as.matrix(cbind(rep(1, n), X))
 y    <- data$diagnosis
 
-lambda <- 1 # (max(t(X) %*% y) / n)
+beta <- rep(0, ncol(X))
+
+for(lambda in c(10, 1, 0.1, 0.01, 0.001)) {
+# (max(t(X) %*% y) / n)
+
+for(outer in 1:10) {
 
 # initialize parameters
-beta <- rep(0, ncol(X))
-p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
+p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
 w <- map_dbl(p, w_adj, epsilon)
 z <- X %*% beta + (y - p) / w
 
@@ -173,17 +200,17 @@ while(terminate < 1) {
     x_k    <- X[ , k]
     x_notk <- X[ , -k]
     b_notk <- beta[-k]
-  
+
     # un-penalized coefficient update
     b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
     # shrinkage update
-    b_k      <- S(b_k_temp, lambda / mean(w * x_k^2))
-    
+    b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+
     # update beta vector along with other parameters
     beta[k] <- b_k
-    #p <- map_dbl(logistic(- X %*% beta), p_adj, epsilon)
-    #w <- map_dbl(p, w_adj, epsilon)
-    #z <- X %*% beta + (y - p) / w
+    p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+    w <- map_dbl(p, w_adj, epsilon)
+    z <- X %*% beta + (y - p) / w
   }
 
   iter <- iter + 1
@@ -195,17 +222,22 @@ while(terminate < 1) {
 
 }
 
+}
+
 # True estimates from GLMNET
-fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda)
+fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-10)
 
 # results
-tibble(
+results <- tibble(
     Variable   = 1:length(beta)
   , Name       = c("intercept", names(data[ , -c(1, 2)]))
   , Jimmy      = beta
   , GLMNET     = as.vector(fit$beta[ , ncol(fit$beta)])
   , Difference = abs(Jimmy - GLMNET)
 ) %>%
-  filter(Jimmy != 0 | GLMNET != 0) %>%
-  knitr::kable()
+  filter(Jimmy != 0 | GLMNET != 0)
+
+print(paste0("lambda = ", lambda))
+print(results %>% knitr::kable())
+}
 ```
