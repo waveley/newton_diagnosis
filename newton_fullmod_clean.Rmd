@@ -59,9 +59,77 @@ corrplot::corrplot(cor_cov_all,
                    diag = FALSE)
 ```
 
-Yikes. Let's make some cuts ($r^2 > 0.9$) and reevaluate. 
+Yikes. Let's make some cuts ($r^2 > 0.9$) and reevaluate. To begin, we zoom in on our culprits.
+
+```{r}
+# call correlation matrix
+corr_df <- cor(bc %>% select(-c(id, y, diagnosis)))
+
+# convert matrix to tidy data frame and restrict to highly correlated pairs
+corr_df <-
+  data.frame(
+    v1   = rownames(corr_df)[row(corr_df)[upper.tri(corr_df)]]
+  , v2   = colnames(corr_df)[col(corr_df)[upper.tri(corr_df)]]
+  , corr = corr_df[upper.tri(corr_df)]
+  ) %>%
+  arrange(-abs(corr)) %>%
+  filter(abs(corr) > 0.90)
+
+# output results
+corr_df %>% knitr::kable()
+```
+
+The variables {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`} are all mutually correlated. Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. Thus, it would be great if we could identify the variable that is the best collective proxy for the other members of this class.
+
+```{r}
+# identify largest equivalence class of proxies
+corr_df_sub1 <- corr_df %>% 
+  filter(
+      v1 == "area_mean"       | v2 == "area_mean"
+    | v1 == "area_worst"      | v2 == "area_worst"
+    | v1 == "perimeter_mean"  | v2 == "perimeter_mean"
+    | v1 == "perimeter_worst" | v2 == "perimeter_worst"
+    | v1 == "radius_mean"     | v2 == "radius_mean"
+    | v1 == "radius_worst"    | v2 == "radius_worst"
+  )
+
+# identify variable that is the best proxy for the other ones
+rbind(corr_df_sub1[ , -2]  %>% rename(v = v1), corr_df_sub1[ , -1] %>% rename(v = v2)) %>%
+  group_by(v) %>%
+  summarize(
+      mean_corr = mean(corr)
+    , std_corr  = sd(corr)
+    , min_corr  = min(corr)
+  ) %>%
+  arrange(-mean_corr) %>%
+  knitr::kable()
+```
+
+The variable `radius_worst` is the best collective proxy for the other five variables in its collective equivalence class, so we will retain `radius_worst` and discard the rest. Let's look at the remaining variables.
+
+```{r}
+corr_df %>% 
+  filter(!(
+      v1 == "area_mean"       | v2 == "area_mean"
+    | v1 == "area_worst"      | v2 == "area_worst"
+    | v1 == "perimeter_mean"  | v2 == "perimeter_mean"
+    | v1 == "perimeter_worst" | v2 == "perimeter_worst"
+    | v1 == "radius_mean"     | v2 == "radius_mean"
+    | v1 == "radius_worst"    | v2 == "radius_worst"
+  )) %>%
+  knitr::kable()
+```
+
+Again, in the spirit of identifying the best representative of each equivalence class, we keep `radius_se`, `concave.points_worst`, and `texture_mean`. In total, we have discarded ten variables.
 
 ```{r, fig.width = 20, fig.asp=0.8}
+bad_vars <- c(
+    "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
+  , "perimeter_se", "area_se"
+  , "concave.points_worst", "concavity_mean"
+  , "texture_worst"
+)
+
 covariates <- 
   bc %>% 
   select(-c(id, y, diagnosis)) %>%
@@ -73,6 +141,11 @@ covariates <-
                    "concave.points_mean", 
                    "compactness_se", 
                    "concave.points_se"))
+
+covariates <-
+  bc %>% 
+  select(-c(id, y, diagnosis)) %>%
+  select(-bad_vars)
 
 cor_cov <- cor(covariates)
 
@@ -282,10 +355,11 @@ glmnet_est <- coef(glmnet_fit) %>% as.vector() %>% round(3)
 ```{r}
 tibble(
   beta_sub = 0:(length(beta_est) - 1),
-  nr_est = beta_est,
+  nr_est = round(beta_est, 3),
   glm_est = glm_est,
   glmnet_est = glmnet_est
-)
+) %>%
+  knitr::kable()
 ```
 
 
