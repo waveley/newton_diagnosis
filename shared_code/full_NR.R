@@ -106,27 +106,30 @@ est_ans <- data.frame(ans) %>%
 #calculate AUC using the beta values found above 
 library(pROC)
 
-# pulling out the terms used in the full model (should be all)
-# we have this flexable in case we want to test less variables 
-terms <- est_ans %>% pull(term) 
-col.num <- which(colnames(tst_data) %in% terms) # get those variables 
-# select the desired x values 
-xvals = tst_data[, col.num] %>% 
-   mutate(
-    inter = 1 # create a intercept variable 
-  ) %>%
-  relocate(inter) # move it to the front 
-# get the beta values
-beta = est_ans %>% pull(vals)
+auc_calc_full <- function(est_ans, tst_data){
+  # pulling out the terms used in the full model (should be all)
+  # we have this flexable in case we want to test less variables 
+  terms <- est_ans %>% pull(term) 
+  col.num <- which(colnames(tst_data) %in% terms) # get those variables 
+  # select the desired x values 
+  xvals = tst_data[, col.num] %>% 
+     mutate(
+      inter = 1 # create a intercept variable 
+    ) %>%
+    relocate(inter) # move it to the front 
+  # get the beta values
+  beta = est_ans %>% pull(vals)
+  
+  pred = as.matrix(xvals )%*% beta # get the cross product of the linear model
+  logit_pred = exp(pred) / (1 + exp(pred)) # link functio to get probs
+  
+  auc_val = auc(tst_data$y, as.vector(logit_pred)) # calculating the AUC
+  
+  #roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE) # graphing AUC
+  return(auc)
 
-pred = as.matrix(xvals )%*% beta # get the cross product of the linear model
-logit_pred = exp(pred) / (1 + exp(pred)) # link functio to get probs
-
-auc(tst_data$y, as.vector(logit_pred)) # calculating the AUC
-
-roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE) # graphing AUC
-
-
+}
+auc_calc_full(est_ans, tst_data)
 
 
 
