@@ -134,8 +134,6 @@ y    <- 1 * (runif(n) > 0.5)
 lambda_max <- max(abs(t(X) %*% y))/n %>% round(digits = 2)
 epsilon <- 1e-5
 
-lambda <- lambda_max 
-
 lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
 
 # initialize parameters
@@ -155,6 +153,7 @@ for (i in 1:length(lambda_seq)) {
   p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
   w <- map_dbl(p, w_adj, epsilon)
   z <- X %*% beta[[i]] + (y - p) / w
+  lambda <- lambda_seq[i]
 
   terminate <- 0
   iter <- 1
@@ -175,12 +174,8 @@ for (i in 1:length(lambda_seq)) {
     
     # update beta list along with other parameters
     beta[[i]][k] <- b_k
-  
 
   iter <- iter + 1
-  lambda <- lambda_seq[i]
-
-
   }
   if (iter == 200 | max(abs(beta[[i]] - beta_old[[i]])) < 1e-10) {
     terminate <- 1
