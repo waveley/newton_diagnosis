@@ -17,6 +17,7 @@ library(tidymodels)
 library(pROC)
 library(kableExtra)
 library(glmnet)
+library(progress)
 ```
 
 
@@ -135,6 +136,9 @@ epsilon <- 1e-5
 
 lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
 
+pb1 <- progress_bar$new(format = "Lasso optimization [:bar] :percent eta: :eta",
+                        total = length(lambda_seq))
+
 # initialize parameters
 beta <- list()
 beta_old <- list()
@@ -148,9 +152,10 @@ for (i in 1:length(lambda_seq)) {
 
 # outer loop for lambda decrement
 for (i in 1:length(lambda_seq)) {
+  pb1$tick()
   lambda <- lambda_seq[i]
 # inner loop for updating quadratic approximation ingredient
-  for (inner in 1:100) {
+  for (inner in 1:2) {
     p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
     w <- map_dbl(p, w_adj, epsilon)
     z <- X %*% beta[[i]] + (y - p) / w
@@ -204,4 +209,103 @@ fit_result <- fit$beta %>% as.matrix() %>% t() %>% data.frame() %>% `rownames<-`
 fit_result %>% mutate(lambda = fit$lambda %>% round(digits = 6)) %>% relocate(lambda)
 
 ```
+
+
+## Cancer data
+
+```{r}
+data <-
+  read_csv("data/breast-cancer.csv", show_col_types = FALSE) %>%
+  mutate(diagnosis = 1 * (diagnosis == "M"))
+
+n    <- nrow(data)
+X    <- data[ , -c(1, 2)]
+X    <- as.matrix(cbind(rep(1, n), X))
+y    <- data$diagnosis
+
+
+lambda_max <- round(max(abs(t(X) %*% y))/n,2)
+epsilon <- 1e-4
+
+lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
+
+pb2 <- progress_bar$new(format = "Lasso optimization [:bar] :percent eta: :eta",
+                        total = length(lambda_seq))
+
+# initialize parameters
+beta <- list()
+beta_old <- list()
+b_k_temp <- list()
+
+# creating initial beta list
+for (i in 1:length(lambda_seq)) {
+  beta[[i]] <- rep(0, ncol(X))
+  beta_old[[i]] <- rep(NA, ncol(X))
+}
+
+# outer loop for lambda decrement
+for (i in 1:length(lambda_seq)) {
+  pb2$tick()
+  lambda <- lambda_seq[i]
+# inner loop for updating quadratic approximation ingredient
+  for (inner in 1:2) {
+    p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
+    w <- map_dbl(p, w_adj, epsilon)
+    z <- X %*% beta[[i]] + (y - p) / w
+    
+    terminate <- 0
+    iter <- 1
+    # while loop for beta convergence
+    while (terminate < 1) {
+      beta_old[[i]] <- beta[[i]]
+      # running coordinate descending algorithm
+      for (k in 1:ncol(X)) {
+        x_k    <- X[ , k]
+        x_notk <- X[ , -k]
+        b_notk <- beta[[i]][-k]
+
+        # un-penalized coefficient update
+        b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+        # shrinkage update
+        b_k          <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+        #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda * (k > 1)) / sum(w * x_k^2)
+        
+        # update beta list along with other parameters
+        beta[[i]][k] <- b_k
+        iter <- iter + 1
+        }
+      if (iter == 200 | max(abs(beta[[i]] - beta_old[[i]])) < 1e-10) {
+        terminate <- 1
+      }
+    }
+  }
+}
+# Estimates from Coordinate Descent
+beta <- data.frame(beta)
+
+for (i in 1:length(lambda_seq)) {
+  colnames(beta)[i] <- paste0(lambda_seq[i] %>% round(digits = 6))
+}
+
+beta <- t(beta) %>% data.frame() 
+
+beta %>% mutate(lambda = rownames(beta)) %>% relocate(lambda) %>% `rownames<-`(NULL)
+
+# True estimates from GLM
+#as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
+
+# True estimates from GLMNET
+fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda_seq, thresh = 1e-10)
+
+fit_result <- fit$beta %>% as.matrix() %>% t() %>% data.frame() %>% `rownames<-`(NULL)
+
+for (i in 1:ncol(fit_result)) {
+  colnames(fit_result)[i] <- paste0("X",i)
+}
+
+fit_result %>% mutate(lambda = fit$lambda %>% round(digits = 6)) %>% relocate(lambda)
+
+```
+
+
 
