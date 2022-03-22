@@ -171,16 +171,18 @@ NewtonRaphson <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
     i <- i + 1
     prevloglik <- stuff$loglik
     prev <- cur
-    newhess <- ((stuff$hess + t(stuff$hess))/2)
+  #   newhess <- ((stuff$hess + t(stuff$hess))/2)
     
-    if (!is.negative.definite(newhess)) { # redirection
-     while (!is.negative.definite(newhess)) {
+    newhess <- stuff$hess
+    
+  #  if (!is.negative.definite(newhess)) { # redirection
+  #   while (!is.negative.definite(newhess)) {
        # subtracts identity matrix until a negative definite matrix is achieved
-        newhess1 <- newhess - diag(nrow(newhess)) 
+  #      newhess1 <- newhess - diag(nrow(newhess)) 
        # sanity check print("changing ascent direction")
-        newhess <- ((newhess1 + t(newhess1))/2)
-      }
-    }
+  #      newhess <- ((newhess1 + t(newhess1))/2)
+  #    }
+  #  }
     
     cur <- prev - solve(newhess) %*% stuff$grad
     stuff <- func(dat, cur)

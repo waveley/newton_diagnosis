@@ -69,9 +69,9 @@ cor(trn_data$texture_mean, trn_data$radius_mean)
 cor(trn_data$radius_mean, trn_data$smoothness_mean)
 cor(trn_data$smoothness_mean, trn_data$texture_mean)
 
-trn_data = trn_data %>% 
-  select(y, texture_mean, radius_mean, smoothness_mean)
-head(trn_data)
+# trn_data = trn_data %>% 
+#   select(y, texture_mean, radius_mean, smoothness_mean)
+# head(trn_data)
 ```
 
 
@@ -157,16 +157,17 @@ NewtonRaphson_w <- function(dat, func, start, tol = 1e-8, maxiter = 200) {
     i <- i + 1
     prevloglik <- stuff$loglik
     prev <- cur
-    newhess <- ((stuff$hess + t(stuff$hess))/2)
+  #  newhess <- ((stuff$hess + t(stuff$hess))/2)
+    newhess <- stuff$hess
     
-    if (!is.negative.definite(newhess)) { # redirection
-     while (!is.negative.definite(newhess)) {
+  #  if (!is.negative.definite(newhess)) { # redirection
+  #   while (!is.negative.definite(newhess)) {
        # subtracts identity matrix until a negative definite matrix is achieved
-        newhess1 <- newhess - diag(nrow(newhess)) 
+  #      newhess1 <- newhess - diag(nrow(newhess)) 
        # sanity check print("changing ascent direction")
-        newhess <- ((newhess1 + t(newhess1))/2)
-      }
-    }
+  #      newhess <- ((newhess1 + t(newhess1))/2)
+  #    }
+  #  }
     
     cur <- prev - solve(newhess) %*% stuff$grad
     stuff <- func(dat, cur)
@@ -455,8 +456,6 @@ while(terminate < 1) {
   }
 
 }
-
-
 ```
 
 
@@ -468,7 +467,7 @@ combine_res <- amy_est_0.0001 %>%
   full_join(amy_est_0.001) %>% 
   full_join(amy_est_0.01) %>% 
   full_join(glm_est) %>%
-  mutate(glmnet_est= glmnet_est) 
+  mutate(glmnet_est = glmnet_est) 
 
 combine_res %>%
   mutate(
