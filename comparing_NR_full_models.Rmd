@@ -75,6 +75,22 @@ head(trn_data)
 ```
 
 
+```{r}
+cor_dat <- data.frame(cor(dat)) %>%
+  mutate(variable_left = names(data.frame(cor(dat)))) %>% 
+  relocate(variable_left) %>% 
+  pivot_longer(
+    c(y:fractal_dimension_worst),
+    names_to = "variables_top",
+    values_to = "cor"
+  ) %>% 
+  mutate(cor = abs(cor)) %>% 
+  arrange(desc(cor)) %>%
+  filter(cor != 1) %>%
+  filter(cor > 0.8) 
+head(cor_dat)
+```
+
 
 
 ## Comparing all Methods
