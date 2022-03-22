@@ -125,13 +125,12 @@ lambda_seq <- seq(lambda_max, 1e-5*lambda_max, length = 100)
 
 ```{r}
 set.seed(1)
-
 n    <- 1000
 X    <- scale(matrix(rnorm(3 * n), c(n, 3)))
 X    <- as.matrix(cbind(rep(1, n), X))
 y    <- 1 * (runif(n) > 0.5)
 
-lambda_max <- max(abs(t(X) %*% y))/n %>% round(digits = 2)
+lambda_max <- round(max(abs(t(X) %*% y))/n,2) 
 epsilon <- 1e-5
 
 lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
@@ -148,41 +147,42 @@ for (i in 1:length(lambda_seq)) {
 }
 
 
-# loop for decrement lambda
-for (i in 1:length(lambda_seq)) {
+# loop for updating quadratic approximation ingredient
+for (outer in 1:10) {
+  # initialize parameters
   p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
   w <- map_dbl(p, w_adj, epsilon)
   z <- X %*% beta[[i]] + (y - p) / w
-  lambda <- lambda_seq[i]
+# loop for lambda decrement
+  for (i in 1:length(lambda_seq)) {
+    lambda <- lambda_seq[i]
 
-  terminate <- 0
-  iter <- 1
-  while (terminate < 1) {
+    terminate <- 0
+    iter <- 1
+    while (terminate < 1) {
     
-    beta_old[[i]] <- beta[[i]]
-  
-  for (k in 1:ncol(X)) {
-    x_k    <- X[ , k]
-    x_notk <- X[ , -k]
-    b_notk <- beta[[i]][-k]
+      beta_old[[i]] <- beta[[i]]
+      for (k in 1:ncol(X)) {
+        x_k    <- X[ , k]
+        x_notk <- X[ , -k]
+        b_notk <- beta[[i]][-k]
 
-    # un-penalized coefficient update
-    b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
-    # shrinkage update
-    b_k          <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
-    #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda * (k > 1)) / sum(w * x_k^2)
-    
-    # update beta list along with other parameters
-    beta[[i]][k] <- b_k
-
-  iter <- iter + 1
+        # un-penalized coefficient update
+        b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+        # shrinkage update
+        b_k          <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+        #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda * (k > 1)) / sum(w * x_k^2)
+        
+        # update beta list along with other parameters
+        beta[[i]][k] <- b_k
+        iter <- iter + 1
+        }
+      if (iter == 200 | max(abs(beta[[i]] - beta_old[[i]])) < 1e-10) {
+        terminate <- 1
+      }
+    }
   }
-  if (iter == 200 | max(abs(beta[[i]] - beta_old[[i]])) < 1e-10) {
-    terminate <- 1
   }
-}
-}
-
 # Estimates from Coordinate Descent
 beta <- data.frame(beta)
 
@@ -205,5 +205,4 @@ fit_result <- fit$beta %>% as.matrix() %>% t() %>% data.frame() %>% `rownames<-`
 fit_result %>% mutate(lambda = fit$lambda %>% round(digits = 6)) %>% relocate(lambda)
 
 ```
-
 
