@@ -146,6 +146,7 @@ b_k_temp <- list()
 # creating initial beta list
 for (i in 1:length(lambda_seq)) {
   beta[[i]] <- rep(0, ncol(X))
+  beta_old[[i]] <- rep(NA, ncol(X))
 }
 
 
@@ -158,19 +159,20 @@ for (i in 1:length(lambda_seq)) {
   terminate <- 0
   iter <- 1
   while (terminate < 1) {
-
-  beta_old[[i]] <- beta[[i]]
   
   for (k in 1:ncol(X)) {
     x_k    <- X[ , k]
     x_notk <- X[ , -k]
     b_notk <- beta[[i]][-k]
+    
+    beta_old[[i]][k] <- beta[[i]][k]
 
     # un-penalized coefficient update
     b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
     # shrinkage update
-    b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
-    #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda) / sum(w * x_k^2)
+    b_k          <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+    #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda * (k > 1)) / sum(w * x_k^2)
+    
     # update beta list along with other parameters
     beta[[i]][k] <- b_k
   
@@ -207,5 +209,4 @@ fit_result <- fit$beta %>% as.matrix() %>% t() %>% data.frame() %>% `rownames<-`
 
 fit_result %>% mutate(lambda = fit$lambda %>% round(digits = 6)) %>% relocate(lambda)
 ```
-
 
