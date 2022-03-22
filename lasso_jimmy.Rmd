@@ -36,7 +36,7 @@ __Proposition.__ By Lemma 1 and Lemma 3,
 
 ```{r}
 data <-
-  read_csv("data/breast-cancer.csv") %>%
+  read_csv("data/breast-cancer.csv", show_col_types = FALSE) %>%
   mutate(diagnosis = 1 * (diagnosis == "M"))
 ```
 
@@ -87,63 +87,63 @@ epsilon <- 10^(-5)
 
 q    <- 30 - 1
 n    <- 1000
-X    <- scale(matrix(rnorm(q * n), c(n, q)))
+X    <- matrix(rnorm(q * n), c(n, q))
 X    <- as.matrix(cbind(rep(1, n), X))
 y    <- 1 * (runif(n) > 0.5)
 
 # initialize parameters
 beta <- rep(0.25, ncol(X))
 
-for(outer in 1:10) {
+outer_term <- 0
+outer <- 1
+while(outer_term < 1) {
 
 p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
 w <- map_dbl(p, w_adj, epsilon)
 z <- X %*% beta + (y - p) / w
 
-terminate <- 0
-iter <- 1
-while(terminate < 1) {
-
-  beta_old <- beta
-
-  for(k in 1:ncol(X)) {
-    x_k    <- X[ , k]
-    x_notk <- X[ , -k]
-    b_notk <- beta[-k]
-
-    # un-penalized coefficient update
-    b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
-    # shrinkage update
-    b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
-    # update beta vector along with other parameters
-    beta[k] <- b_k
-    p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
-    w <- map_dbl(p, w_adj, epsilon)
-    z <- X %*% beta + (y - p) / w
-  }
-
-  iter <- iter + 1
-
-  if(iter == 100 | max(abs(beta - beta_old)) < 10^(-10)) {
-    print(iter)
-    terminate <- 1
-  }
+  terminate <- 0
+  iter <- 1
+  while(terminate < 1) {
   
+    beta_old <- beta
+  
+    for(k in 1:ncol(X)) {
+      x_k    <- X[ , k]
+      x_notk <- X[ , -k]
+      b_notk <- beta[-k]
+  
+      # un-penalized coefficient update
+      b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+      # shrinkage update
+      b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+      # update beta vector along with other parameters
+      beta[k] <- b_k
+      #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+      #w <- map_dbl(p, w_adj, epsilon)
+      #z <- X %*% beta + (y - p) / w
+    }
+
+    iter <- iter + 1
+
+    if(iter == 100 | max(abs(beta - beta_old)) < 10^(-12)) {
+      terminate <- 1
+    }
+
+  }
+
+  print(iter)
+  outer <- outer + 1
+
+  if(outer == 100 | iter == 2) {
+      print(iter)
+      outer_term <- 1
+  }
+
 }
 
-#print(beta)
-
-}
-
-# Estimates from Coordinate Descent
-#print(beta)
-
-# True estimates from GLM
-#as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
-
-# True estimates from GLMNET
-fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-10)
-#as.vector(fit$beta[ , ncol(fit$beta)])
+# true estimates from glmnet
+fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-12)
 
 # results
 results <- tibble(
@@ -151,14 +151,12 @@ results <- tibble(
   , Jimmy      = beta
   , GLM        = as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
   , GLMNET     = as.vector(fit$beta[ , ncol(fit$beta)])
-  , Difference = abs(Jimmy - GLM)
-  , Change     = (Jimmy - GLM) / GLM
+  , Difference = abs(Jimmy - GLMNET)
+  , Change     = (Jimmy - GLMNET) / GLMNET
 ) %>%
+  mutate(GLM = na_if(GLM, (lambda != 0) * GLM)) %>%
   filter(Jimmy != 0 | GLMNET != 0)
-
 results %>% knitr::kable()
-
-c(mean(results$Difference[-1]), mean(results$Change[-1]), 1/n)
 ```
 
 ## Test with Actual Data
@@ -168,26 +166,33 @@ set.seed(1)
 epsilon <- 10^(-5)
 
 n    <- nrow(data)
-#X    <- scale(data[ , -c(1, 2)])
-X    <- data[ , -c(1, 2)]
+X    <- scale(data[ , -c(1, 2)])
+#X    <- data[ , -c(1, 2)]
 X    <- as.matrix(cbind(rep(1, n), X))
 y    <- data$diagnosis
 
 beta <- rep(0, ncol(X))
+lambda_vec <- 1 - log(seq(exp(0.001), exp(1), 0.01))
+lambda_vec <- exp(seq(log(0.4), log(0.0004), -0.1))
+lambda_vec <- c(0.4, 0.38, 0.36)
 
-for(lambda in c(10, 1, 0.1, 0.01, 0.001)) {
+for(lambda in lambda_vec) {
 # (max(t(X) %*% y) / n)
 
-for(outer in 1:10) {
+for(outer in 1:3) {
 
 # initialize parameters
-p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
-w <- map_dbl(p, w_adj, epsilon)
-z <- X %*% beta + (y - p) / w
+#p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+#w <- map_dbl(p, w_adj, epsilon)
+#z <- X %*% beta + (y - p) / w
 
 terminate <- 0
 iter <- 1
 while(terminate < 1) {
+
+  p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+  w <- map_dbl(p, w_adj, epsilon)
+  z <- X %*% beta + (y - p) / w
 
   beta_old <- beta
   # initially go through all parameters
@@ -208,14 +213,14 @@ while(terminate < 1) {
 
     # update beta vector along with other parameters
     beta[k] <- b_k
-    p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
-    w <- map_dbl(p, w_adj, epsilon)
-    z <- X %*% beta + (y - p) / w
+    #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+    #w <- map_dbl(p, w_adj, epsilon)
+    #z <- X %*% beta + (y - p) / w
   }
 
   iter <- iter + 1
 
-  if(iter == 1000 | max(abs(beta - beta_old)) < 10^-10) {
+  if(iter == 1000 | max(abs(beta - beta_old)) < 10^-12) {
     print(iter)
     terminate <- 1
   }
@@ -225,7 +230,7 @@ while(terminate < 1) {
 }
 
 # True estimates from GLMNET
-fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-10)
+fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda, thresh = 10^-12)
 
 # results
 results <- tibble(
@@ -240,4 +245,122 @@ results <- tibble(
 print(paste0("lambda = ", lambda))
 print(results %>% knitr::kable())
 }
+```
+
+
+
+
+
+
+
+
+
+
+## Second Attempt with Actual Data
+
+```{r}
+epsilon <- 10^(-5)
+
+n    <- nrow(data)
+#X    <- scale(data[ , -c(1, 2)])
+X    <- data[ , -c(1, 2)]
+X    <- as.matrix(cbind(rep(1, n), X))
+y    <- data$diagnosis
+
+beta <- rep(0, ncol(X))
+lambda_vec <- exp(seq(log(0.4), log(0.4/1000), -0.2))
+lambda_vec <- rep(seq(10, 2, -1), 4) / c(rep(1, 9), rep(10, 9), rep(100, 9), rep(1000, 9))
+lambda_vec <- exp(seq(log(0.4), log(0.4/10), -0.1))
+lambda_vec <- seq(0.40, 0.20, -0.01)
+
+# initialize parameters
+beta <- rep(0, ncol(X))
+beta_matrix <- t(c(NA, beta))
+
+for(lambda in lambda_vec) {
+
+  outer_term <- 0
+  outer <- 1
+  while(outer_term < 1) {
+  
+  #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+  #w <- map_dbl(p, w_adj, epsilon)
+  #z <- X %*% beta + (y - p) / w
+  
+    terminate <- 0
+    iter <- 1
+    while(terminate < 1) {
+    
+      beta_old <- beta
+
+      p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+      w <- map_dbl(p, w_adj, epsilon)
+      z <- X %*% beta + (y - p) / w
+
+      for(k in 1:ncol(X)) {
+        x_k    <- X[ , k]
+        x_notk <- X[ , -k]
+        b_notk <- beta[-k]
+
+        # un-penalized coefficient update
+        b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+        # shrinkage update
+        b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+        # update beta vector along with other parameters
+        beta[k] <- b_k
+        #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+        #w <- map_dbl(p, w_adj, epsilon)
+        #z <- X %*% beta + (y - p) / w
+      }
+
+      iter <- iter + 1
+
+      if(iter == 100 | max(abs(beta - beta_old)) < 10^(-10)) {
+        terminate <- 1
+      }
+
+    }
+
+    outer <- outer + 1
+  
+    if(outer == 100 | iter == 2) {
+        print(lambda)
+        outer_term <- 1
+    }
+
+  }
+
+  # true estimates from glmnet
+  #fit <- glmnet(
+  #  X
+  #  , y
+  #  , family = "binomial"
+  #  , standardize = FALSE
+  #  , lambda = lambda
+  #  , thresh = 10^-12
+  #  , maxit  = 10^6
+  #)
+
+  # results
+  #results <- tibble(
+  #    Variable   = 1:length(beta)
+  #  , Name       = c("intercept", names(data[ , -c(1, 2)]))
+  #  , Jimmy      = beta
+  #  , GLMNET     = as.vector(fit$beta[ , ncol(fit$beta)])
+  #  , Difference = abs(Jimmy - GLMNET)
+  #  , Change     = (Jimmy - GLMNET) / GLMNET
+  #) %>%
+  #  filter(Jimmy != 0 | GLMNET != 0)
+
+  #print(paste0("lambda = ", lambda))
+  #print(results %>% knitr::kable())
+
+  beta_matrix <- rbind(beta_matrix, t(c(lambda, beta)))
+
+}
+```
+
+
+```{r}
+results %>% knitr::kable()
 ```
