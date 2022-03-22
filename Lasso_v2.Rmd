@@ -146,22 +146,21 @@ for (i in 1:length(lambda_seq)) {
   beta_old[[i]] <- rep(NA, ncol(X))
 }
 
-
-# loop for updating quadratic approximation ingredient
-for (outer in 1:10) {
-  # initialize parameters
-  p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
-  w <- map_dbl(p, w_adj, epsilon)
-  z <- X %*% beta[[i]] + (y - p) / w
-# loop for lambda decrement
-  for (i in 1:length(lambda_seq)) {
-    lambda <- lambda_seq[i]
-
+# outer loop for lambda decrement
+for (i in 1:length(lambda_seq)) {
+  lambda <- lambda_seq[i]
+# inner loop for updating quadratic approximation ingredient
+  for (inner in 1:100) {
+    p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
+    w <- map_dbl(p, w_adj, epsilon)
+    z <- X %*% beta[[i]] + (y - p) / w
+    
     terminate <- 0
     iter <- 1
+    # while loop for beta convergence
     while (terminate < 1) {
-    
       beta_old[[i]] <- beta[[i]]
+      # running coordinate descending algorithm
       for (k in 1:ncol(X)) {
         x_k    <- X[ , k]
         x_notk <- X[ , -k]
@@ -182,7 +181,7 @@ for (outer in 1:10) {
       }
     }
   }
-  }
+}
 # Estimates from Coordinate Descent
 beta <- data.frame(beta)
 
