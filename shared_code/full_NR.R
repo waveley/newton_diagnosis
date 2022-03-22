@@ -89,16 +89,23 @@ NewtonRaphson_a <- function(dat,  start, tol = 1e-8, maxiter = 200){
 
 
 
-# betavec = c(rep(0.01, ncol(trn_data))) # beta vec example 
-# ans <- NewtonRaphson_a(trn_data, betavec) # running method using trn_data dataset 
-# 
-# # get just the beta values 
-# est_ans <- data.frame(ans) %>%
-#   select(-step, -loglik, -i) %>%
-#   filter(row_number() == n()) %>%
-#   pivot_longer(
-#     cols = everything(),
-#     names_to = "term",
-#     values_to = "vals"
-#   ) 
+betavec = c(rep(0.01, ncol(trn_data))) # beta vec example
+ans <- NewtonRaphson_a(trn_data, betavec) # running method using trn_data dataset
+
+# get just the beta values
+est_ans <- data.frame(ans) %>%
+  select(-step, -loglik, -i) %>%
+  filter(row_number() == n()) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "term",
+    values_to = "vals"
+  )
+
+
+predicted <- predict(glmnet_fit, newx = tst_data %>% select(-y), type="response")
+
+#calculate AUC
+library(pROC)
+auc(test$default, predicted)
 
