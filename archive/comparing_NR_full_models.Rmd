@@ -242,7 +242,7 @@ loglike_func <- function(dat, betavec){
   
   # finding the pi values 
   u = dat_x %*% betavec
-  pi <- exp(u) / (1+exp(u))
+  pi <- exp(u) / (1 + exp(u))
   
   # loglikelihood
   loglik <- sum(dat$y*u - log(1 + exp(u)))
@@ -350,8 +350,6 @@ amy_est_0.01 <- data.frame(ans0.01) %>%
   mutate(`a_0.01` = round(`a_0.01`,3)) 
 
 ```
-
-
 
 ### Base R glm 
 
@@ -466,8 +464,6 @@ while(terminate < 1) {
 
 }
 ```
-
-
 
 ## Combining Results 
 
