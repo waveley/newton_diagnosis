@@ -76,11 +76,16 @@ cor(trn_data$smoothness_mean, trn_data$texture_mean)
 
 
 ```{r}
+
+dat <-  bc %>% select(-id) %>%
+  rename(y = diagnosis) %>%
+  mutate(y = ifelse(y == "B", 0, 1)) %>% select(-c("area_mean", "area_se", "area_worst", "perimeter_mean", "perimeter_se", "perimeter_worst", "concave.points_mean")) %>% select(-ends_with("_worst"))
+
 cor_dat <- data.frame(cor(dat)) %>%
   mutate(variable_left = names(data.frame(cor(dat)))) %>% 
-  relocate(variable_left) %>% 
+  relocate(variable_left)  %>% 
   pivot_longer(
-    c(y:fractal_dimension_worst),
+    c(y:fractal_dimension_se),
     names_to = "variables_top",
     values_to = "cor"
   ) %>% 
@@ -94,6 +99,10 @@ cor_dat <- data.frame(cor(dat)) %>%
   filter(i %% 2 == 0) %>%
   select(-i)
 cor_dat
+
+corrplot::corrplot(cor(dat))
+
+fin_names <- dat %>% names()
 ```
 
 
