@@ -1,0 +1,207 @@
+---
+title: "Logistic Lasso optimization"
+author: "Hun, Jimmy"
+date: "3/19/2022"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(tidymodels)
+library(pROC)
+library(kableExtra)
+library(glmnet)
+```
+
+
+```{r}
+cancer_df <- read.csv("~/Downloads/breast-cancer.csv") %>% janitor::clean_names()
+```
+
+
+```{r}
+data <- 
+  cancer_df %>% dplyr::select(-id, -x) %>% 
+  mutate(diagnosis = ifelse(diagnosis == "M", 1, 0)) %>% distinct()
+
+set.seed(1)
+split <- initial_split(data, prop = 0.8)
+
+training_df <- split %>% training()
+
+testing_df <- split %>% testing()
+```
+
+## Standardization
+
+```{r}
+for (i in 2:length(training_df)) {
+  training_df[,i] = (training_df[,i] - mean(training_df[,i]))/sd(training_df[,i])
+}
+```
+
+## Checking standardization
+
+```{r}
+summary <- skimr::skim_without_charts(training_df) %>% data.frame()
+summary[1:6] %>% kable()
+```
+
+```{r}
+X <- training_df %>% dplyr::select(-diagnosis) %>% as.matrix()
+y <- training_df$diagnosis %>% as.matrix()
+
+dim(X)
+dim(y)
+```
+
+## Helper Functions
+
+```{r}
+# logistic function
+logistic <- function(x) 1 / (1 + exp(-x))
+
+# soft threshold
+S <- function(beta, gamma) {
+  if (beta > 0 && gamma < abs(beta)) {
+    beta - gamma
+  } else if (beta < 0 && gamma < abs(beta)) {
+    beta + gamma
+  } else {
+    0
+  }
+}
+
+
+# probability adjustment function
+p_adj <- function(p, epsilon) {
+  if (p < epsilon) {
+    0
+  } else if (p > 1 - epsilon) {
+    1
+  } else {
+    p
+  }
+}
+
+# weight adjustment function
+w_adj <- function(p, epsilon) {
+  if ((p < epsilon) | (p > 1 - epsilon)) {
+    epsilon
+  } else {
+    p * (1 - p)
+  }
+}
+```
+
+
+## Computing lambda max in two ways and defining lambda sequence
+
+```{r}
+alpha = 1
+n = length(y)
+
+lambda_max <- max(abs(t(X) %*% y))/n
+
+same_lambda_max <- max(abs(t(y - mean(y)*(1 - mean(y))) %*% X ))/(alpha*n)
+
+lambda_max
+same_lambda_max
+
+lambda_max <- lambda_max %>% round(digits = 2)
+
+epsilon = 1e-5
+lambda_seq <- seq(lambda_max, 1e-5*lambda_max, length = 100)
+```
+
+
+## Toy example
+
+```{r}
+set.seed(1)
+n    <- 1000
+X    <- scale(matrix(rnorm(3 * n), c(n, 3)))
+X    <- as.matrix(cbind(rep(1, n), X))
+y    <- 1 * (runif(n) > 0.5)
+
+lambda_max <- round(max(abs(t(X) %*% y))/n,2) 
+epsilon <- 1e-5
+
+lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
+
+# initialize parameters
+beta <- list()
+beta_old <- list()
+b_k_temp <- list()
+
+# creating initial beta list
+for (i in 1:length(lambda_seq)) {
+  beta[[i]] <- rep(0, ncol(X))
+  beta_old[[i]] <- rep(NA, ncol(X))
+}
+
+# outer loop for lambda decrement
+for (i in 1:length(lambda_seq)) {
+  lambda <- lambda_seq[i]
+# inner loop for updating quadratic approximation ingredient
+  for (inner in 1:100) {
+    p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
+    w <- map_dbl(p, w_adj, epsilon)
+    z <- X %*% beta[[i]] + (y - p) / w
+    
+    terminate <- 0
+    iter <- 1
+    # while loop for beta convergence
+    while (terminate < 1) {
+      beta_old[[i]] <- beta[[i]]
+      # running coordinate descending algorithm
+      for (k in 1:ncol(X)) {
+        x_k    <- X[ , k]
+        x_notk <- X[ , -k]
+        b_notk <- beta[[i]][-k]
+
+        # un-penalized coefficient update
+        b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
+        # shrinkage update
+        b_k          <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
+        #b_k      <- S(sum(w*x_k*(z - x_notk %*% b_notk)), lambda * (k > 1)) / sum(w * x_k^2)
+        
+        # update beta list along with other parameters
+        beta[[i]][k] <- b_k
+        iter <- iter + 1
+        }
+      if (iter == 200 | max(abs(beta[[i]] - beta_old[[i]])) < 1e-10) {
+        terminate <- 1
+      }
+    }
+  }
+}
+# Estimates from Coordinate Descent
+beta <- data.frame(beta)
+
+for (i in 1:length(lambda_seq)) {
+  colnames(beta)[i] <- paste0(lambda_seq[i] %>% round(digits = 6))
+}
+
+beta <- t(beta) %>% data.frame() 
+
+beta %>% mutate(lambda = rownames(beta)) %>% relocate(lambda) %>% `rownames<-`(NULL)
+
+# True estimates from GLM
+#as.vector(glm(y ~ X[ , -1], family = binomial)$coefficients)
+
+# True estimates from GLMNET
+fit <- glmnet(X, y, family = "binomial", standardize = FALSE, lambda = lambda_seq, thresh = 1e-10)
+
+fit_result <- fit$beta %>% as.matrix() %>% t() %>% data.frame() %>% `rownames<-`(NULL)
+
+fit_result %>% mutate(lambda = fit$lambda %>% round(digits = 6)) %>% relocate(lambda)
+
+```
+
