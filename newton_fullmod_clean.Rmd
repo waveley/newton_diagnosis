@@ -1,0 +1,338 @@
+---
+title: "Newton Raphson Full Model"
+author: "Waveley Qiu (wq2162)"
+date: "2022-03-22"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+source("shared_code/setup.R")
+source("shared_code/partition.R")
+
+library(tidyverse)
+library(pROC)
+library(kableExtra)
+library(knitr)
+library(xtable)
+library(glmnet)
+```
+
+## EDA
+
+Let's import and take a look at the data.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+```
+
+Let's take a look at the distributions of other variables.
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bc %>% 
+  select(diagnosis, contains("mean")) %>%
+  gather(key = "stat", value = "value", 2:11) %>% 
+  ggplot(aes(x = value, fill = diagnosis)) +
+    facet_wrap(~ stat, scales = "free") +
+    geom_density(alpha = 0.5)
+```
+
+```{r}
+tbl_summary(bc, by = diagnosis)
+```
+
+We want our outcome variable to be binary. Let's create a new outcome variable, `y`, which will be 1 if `diagnosis == 'M'` and 0 if `diagnosis == 'B'.
+
+```{r}
+bc <- bc %>% mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% relocate(y)
+```
+
+## Multicollinearity Investigation
+
+Let's look at the correlations for all predictors.
+
+```{r, fig.width = 20, fig.asp=0.8}
+cor_cov_all <- cor(bc %>% select(-c(id, y, diagnosis)))
+
+corrplot::corrplot(cor_cov_all, 
+                   method = "color",
+                   type = "lower", 
+                   insig = "blank",
+                   diag = FALSE)
+```
+
+Yikes. Let's make some cuts ($r^2 > 0.9$) and reevaluate. 
+
+```{r, fig.width = 20, fig.asp=0.8}
+covariates <- 
+  bc %>% 
+  select(-c(id, y, diagnosis)) %>%
+  dplyr::select(-contains("area")) %>%
+  dplyr::select(-contains("perimeter")) %>%
+  dplyr::select(-ends_with("_worst")) %>%
+  dplyr::select(-c("concavity_mean", 
+                   "compactness_mean", 
+                   "concave.points_mean", 
+                   "compactness_se", 
+                   "concave.points_se"))
+
+cor_cov <- cor(covariates)
+
+
+corrplot::corrplot(cor_cov, 
+                   method = "color",
+                   type = "lower", 
+                   insig = "blank",
+                   diag = FALSE)
+```
+
+Better. We'll proceed with these predictors.
+
+```{r}
+fin_names <- covariates %>% names()
+```
+
+
+## Full Model
+
+We want to establish logistic model using all variables in the dataset. We will do this by performing a Newton Raphson optimization in order to find the MLEs of the beta coefficients.
+
+The likelihood function for a logistic model is defined as follows:
+
+$$
+f(\beta_0, \beta_1,...,\beta_{30}) = \sum_{i=1}^n \left(Y_i\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right) - \log(1+e^{\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right)}\right)
+$$
+
+Let $\pi_i = \frac{e^{\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}}}{1+e^{\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}}}$. Then, the gradient of this function is defined as follows:
+
+$$
+\triangledown f(\beta_0, \beta_1, ..., \beta_{p}) = 
+\left(
+\begin{matrix}
+\sum_{i=1}^n Y_i-\pi_i \\ 
+\sum_{i=1}^n x_{i1}(Y_i - \pi_i)\\
+\sum_{i=1}^n x_{i2}(Y_i - \pi_i)\\
+\vdots \\
+\sum_{i=1}^n x_{ip}(Y_i - \pi_i)
+\end{matrix}
+\right)
+$$
+Finally, we define the Hessian of this function as follows:
+
+$$
+\begin{aligned}
+\triangledown^2f(\beta_0, \beta_1, ..., \beta_{p}) &=  -\sum_{i=1}^n \left(
+\begin{matrix}
+1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{ip}
+\end{matrix}
+\right) \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{ip}\right)\pi_i(1-\pi_i)
+\\
+&= -\left(
+\begin{matrix}
+\sum_{i=1}^n \pi_i(1-\pi_i) &\quad \sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^nx_{ip}\pi_i(1-\pi_i) \\
+\sum_{i=1}^n x_{i1}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}^2\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{ip}x_{i1}\pi_i(1-\pi_i) \\
+\sum_{i=1}^n x_{i2}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{i2}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{ip}x_{i2}\pi_i(1-\pi_i) \\
+\vdots &\quad \ddots &\quad \ddots &\quad \vdots \\
+\sum_{i=1}^n x_{ip}\pi_i(1-\pi_i) &\quad\sum_{i=1}^n x_{i1}x_{ip}\pi_i(1-\pi_i) &\quad \dots &\quad \sum_{i=1}^n x_{ip}^2\pi_i(1-\pi_i) 
+\end{matrix}
+\right)
+\\
+&= \left(1 \,\, x_{i1} \,\, x_{i2} \,\, \dots \,\, x_{ip}\right) I(\pi_i(1-\pi_i))\left(
+\begin{matrix}
+1 \\ x_{i1} \\ x_{i2} \\ \vdots \\ x_{ip}
+\end{matrix}
+\right)
+\end{aligned}
+$$
+
+Let's create a function that produces the log-likelihood, gradient vector, and hessian matrix, given a dataset and beta vector:
+
+```{r, warning=FALSE, messsage=FALSE}
+loglike_func <- function(dat, betavec){
+  
+  dat = bc_train
+  
+  # x matrix
+  dat_temp <-
+    dat %>%
+    mutate(intercept = 1) %>%
+    select(-y) %>%
+    relocate(intercept)
+  
+  dat_x <-  
+    dat_temp %>%
+    as.matrix() %>%
+    unname() 
+  
+  # pi vector
+  u <- dat_x %*% betavec
+  pi <- exp(u) / (1 + exp(u))
+  
+  # loglikelihood
+  loglik <- sum(dat$y*u - log(1 + exp(u)))
+  
+  #gradient 
+  grad <- t(dat_x) %*% (dat$y - pi)
+  
+  # Hessian 
+  W <- diag(nrow(pi))
+  diag(W) <- pi*(1 - pi)
+  hess <- -(t(dat_x) %*% W %*% (dat_x))
+  
+  return(list(loglik = loglik, grad = grad, hess = hess))
+  
+}
+```
+
+
+Now, let's construct a Newton Raphson algorithm to determine $\beta_i$ coefficients that maximize the likelihood of the function.
+
+```{r, warning=FALSE, message=FALSE}
+
+NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
+  
+  i <- 0
+  cur <- start 
+  stuff <- loglike_func(dat, cur)
+  res <- c(i = 0, "loglik" = stuff$loglik,  "step" = 1, cur)
+  
+  prevloglik <- -Inf # to make sure it iterates
+  
+  while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+    step <- 1
+    i <- i + 1
+    prevloglik <- stuff$loglik
+    
+    # check negative definite  
+    eigen_vals <- eigen(stuff$hess)
+    
+    if (max(eigen_vals$values) <= 0 ) { # check neg def, if not change 
+      hess <- stuff$hess
+    } else { # if it is pos def then need to adjust 
+      hess <- stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
+    } 
+    
+    prev  <- cur
+    cur   <- prev - step*(solve(stuff$hess) %*% stuff$grad)
+    stuff <- loglike_func(dat, cur) # log-lik, gradient, Hessian
+    
+    # step halving
+    while (stuff$loglik < prevloglik) {
+      stuff <- loglike_func(dat, prev)
+      step  <- step / 2 # this is where half steping happens 
+      cur   <- prev - step*(solve(stuff$hess) %*% stuff$grad)
+      stuff <- loglike_func(dat, cur)
+    }
+    # add current values to results matrix
+    res <- rbind(res, c(i, stuff$loglik, step, cur))
+  }
+  
+  colnames(res) <- c("i", "loglik",  "step", "intercept", names(dat[,-1]))
+  return(res)
+}
+```
+
+## Splitting Testing and Training Data
+
+Using a function from `partition.R`, we will split our data into testing and training. We will include only the variables we have identified as being sufficiently uncorrelated.
+
+```{r}
+col.num <- which(colnames(bc) %in% fin_names) # get those variables 
+bc_trunc <- bc[, c(1, col.num)]
+
+bc_test_train <- partition(0.8, bc_trunc)
+
+bc_test <- bc_test_train %>% filter(part_id == "test") %>% select(-part_id)
+bc_train <- bc_test_train %>% filter(part_id == "train") %>% select(-part_id)
+```
+
+## Running Newton-Raphson Algorithm
+
+Let's establish a beta vector and run the Newton-Raphson algorithm we've established on the training data.
+
+```{r}
+betavec <- c(rep(0.01, ncol(bc_train))) %>% as.matrix()
+nr1 <- NewtonRaphson(bc_train, betavec)
+beta_est <- nr1[nrow(nr1), -c(1:3)] %>% as.vector()
+```
+
+## Compare with GLM and GLMNET
+
+Let's run GLM.
+
+```{r}
+glm_fit <- glm(y~., data = bc_train, family = "binomial")
+result_glm <- summary(glm_fit)
+
+glm_est <- glm_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate) %>% 
+  mutate(glm_est = round(estimate, 3)) %>%
+  select(-estimate) %>% 
+  mutate(term = ifelse(term == "(Intercept)", "intercept", term)) %>% pull(glm_est)
+```
+
+Now, let's run GLMNET.
+
+```{r}
+xdat <- bc_train %>% select(-y) %>% as.matrix()
+glmnet_fit <- glmnet(x = xdat, y = bc_train$y, family = "binomial", lambda = 0)
+glmnet_est <- coef(glmnet_fit) %>% as.vector() %>% round(3)
+```
+
+
+```{r}
+tibble(
+  beta_sub = 0:(length(beta_est) - 1),
+  nr_est = beta_est,
+  glm_est = glm_est,
+  glmnet_est = glmnet_est
+)
+```
+
+
+## AUC
+
+```{r}
+auc_calc_full <- function(beta_est, test_data){
+  # pulling out the terms used in the full model (should be all)
+  
+  # we have this flexible in case we want to test fewer variables 
+  # terms <- beta_est %>% pull(term) 
+  # col.num <- which(colnames(test_data) %in% terms)
+  # select the desired x values 
+  
+  xvals <- test_data[,-1] %>% 
+     mutate(
+      intercept = 1 # create a intercept variable 
+    ) %>%
+    relocate(intercept) # move it to the front 
+  
+  pred <- as.matrix(xvals) %*% beta_est # get the cross product of the linear model
+  logit_pred <- exp(pred) / (1 + exp(pred)) # link function to get probabilities
+  
+  auc_val <- auc(test_data$y, as.vector(logit_pred)) # calculating the AUC
+  
+  # roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE) # graphs AUC
+  return(auc_val)
+
+}
+
+auc <- auc_calc_full(beta_est, bc_test)
+
+```
+
+
+The AUC of the Newton-Raphson Model is `r auc`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
