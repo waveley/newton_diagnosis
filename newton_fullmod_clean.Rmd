@@ -347,7 +347,7 @@ Now, let's run GLMNET.
 
 ```{r}
 xdat <- bc_train %>% select(-y) %>% as.matrix()
-glmnet_fit <- glmnet(x = xdat, y = bc_train$y, family = "binomial", lambda = 0)
+glmnet_fit <- glmnet(x = xdat, y = bc_train$y, family = "binomial", lambda = 0, thresh = 10^-12)
 glmnet_est <- coef(glmnet_fit) %>% as.vector() %>% round(3)
 ```
 
