@@ -103,9 +103,66 @@ est_ans <- data.frame(ans) %>%
   )
 
 
-predicted <- predict(glmnet_fit, newx = tst_data %>% select(-y), type="response")
-
 #calculate AUC
 library(pROC)
-auc(test$default, predicted)
+auc(tst_data$y, info_df$logit_pred)
 
+terms <- est_ans %>% pull(term) 
+col.num <- which(colnames(tst_data) %in% terms)
+xvals = tst_data[, col.num] %>% 
+   mutate(
+    inter = 1
+  ) %>%
+  relocate(inter)
+beta = est_ans %>% pull(vals)
+
+pred = as.matrix(xvals )%*% beta
+logit_pred = exp(pred) / (1 + exp(pred))
+
+auc(tst_data$y, as.vector(logit_pred))
+
+roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE)
+
+
+
+load("./test_matrix.RData")
+
+# initalizing the storage of the probs 
+pred_list = list()
+
+# looping through all the lambda values 
+for(i in c(1:nrow(beta_matrix))){
+  # getting one lambda's beta values. exclusing the lambda value
+  beta = beta_matrix[i,-1] 
+  
+  # getting the x values, do not want the first y value 
+  xvals = tst_data[, -1] %>% 
+   mutate(
+    inter = 1 # creating a column for the intercept 
+  ) %>%
+  relocate(inter) # move the intercept to the front 
+  
+  pred = as.matrix(xvals )%*% beta # corss product to get the linear function 
+  pred_prob = exp(pred) / (1 + exp(pred)) # link function 
+  
+  pred_list[[i]] = pred_prob # saving the probabilities 
+}
+
+# putting the probabilities in a data.frame
+pred_tib <- tibble(lambda = beta_matrix[,1] ,pred_list = pred_list, ) 
+
+
+
+pred_vec <- pred_list[2][[1]] %>% as.vector()
+
+auc <- auc(tst_data$y, pred_vec)
+
+pred_tib %>% mutate(vec_pred = map(.x = pred_tib, ~as.vector(.x))) %>% 
+
+
+                    auc = map(.x = vec_pred, ~ auc(tst_data$y, .x)))
+
+
+map_dbl(x in c(1:20), function(x) auc(tst_data$y, pred_tib[[1]][x]))
+
+x?map

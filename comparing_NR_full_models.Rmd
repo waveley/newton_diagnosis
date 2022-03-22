@@ -87,7 +87,7 @@ cor_dat <- data.frame(cor(dat)) %>%
   mutate(cor = abs(cor)) %>% 
   arrange(desc(cor)) %>%
   filter(cor != 1) %>%
-  filter(cor > 0.8) %>%
+  filter(cor > 0.7) %>%
   mutate(
     i = c(1:n())
   ) %>% 
