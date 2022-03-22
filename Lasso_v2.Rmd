@@ -229,8 +229,12 @@ epsilon <- 1e-4
 
 lambda_seq <- seq(lambda_max, epsilon*lambda_max, length = 100)
 
-pb2 <- progress_bar$new(format = "Lasso optimization [:bar] :percent eta: :eta",
+
+pb1 <- progress_bar$new(format = "Lasso optimization1 [:bar] :percent eta: :eta",
                         total = length(lambda_seq))
+
+pb2 <- progress_bar$new(format = "Lasso optimization2 [:bar] :percent eta: :eta",
+                        total = ncol(X))
 
 # initialize parameters
 beta <- list()
@@ -245,14 +249,13 @@ for (i in 1:length(lambda_seq)) {
 
 # outer loop for lambda decrement
 for (i in 1:length(lambda_seq)) {
-  pb2$tick()
+  pb1$tick()
   lambda <- lambda_seq[i]
 # inner loop for updating quadratic approximation ingredient
-  for (inner in 1:2) {
+  for (inner in 1:8) {
     p <- map_dbl(logistic(X %*% beta[[i]]), p_adj, epsilon)
     w <- map_dbl(p, w_adj, epsilon)
     z <- X %*% beta[[i]] + (y - p) / w
-    
     terminate <- 0
     iter <- 1
     # while loop for beta convergence
