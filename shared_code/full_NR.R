@@ -102,67 +102,32 @@ est_ans <- data.frame(ans) %>%
     values_to = "vals"
   )
 
-
-#calculate AUC
+######################### AUC Full Model #########################
+#calculate AUC using the beta values found above 
 library(pROC)
-auc(tst_data$y, info_df$logit_pred)
 
+# pulling out the terms used in the full model (should be all)
+# we have this flexable in case we want to test less variables 
 terms <- est_ans %>% pull(term) 
-col.num <- which(colnames(tst_data) %in% terms)
+col.num <- which(colnames(tst_data) %in% terms) # get those variables 
+# select the desired x values 
 xvals = tst_data[, col.num] %>% 
    mutate(
-    inter = 1
+    inter = 1 # create a intercept variable 
   ) %>%
-  relocate(inter)
+  relocate(inter) # move it to the front 
+# get the beta values
 beta = est_ans %>% pull(vals)
 
-pred = as.matrix(xvals )%*% beta
-logit_pred = exp(pred) / (1 + exp(pred))
+pred = as.matrix(xvals )%*% beta # get the cross product of the linear model
+logit_pred = exp(pred) / (1 + exp(pred)) # link functio to get probs
 
-auc(tst_data$y, as.vector(logit_pred))
+auc(tst_data$y, as.vector(logit_pred)) # calculating the AUC
 
-roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE)
-
-
-
-load("./test_matrix.RData")
-
-# initalizing the storage of the probs 
-pred_list = list()
-
-# looping through all the lambda values 
-for(i in c(1:nrow(beta_matrix))){
-  # getting one lambda's beta values. exclusing the lambda value
-  beta = beta_matrix[i,-1] 
-  
-  # getting the x values, do not want the first y value 
-  xvals = tst_data[, -1] %>% 
-   mutate(
-    inter = 1 # creating a column for the intercept 
-  ) %>%
-  relocate(inter) # move the intercept to the front 
-  
-  pred = as.matrix(xvals )%*% beta # corss product to get the linear function 
-  pred_prob = exp(pred) / (1 + exp(pred)) # link function 
-  
-  pred_list[[i]] = pred_prob # saving the probabilities 
-}
-
-# putting the probabilities in a data.frame
-pred_tib <- tibble(lambda = beta_matrix[,1] ,pred_list = pred_list, ) 
+roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE) # graphing AUC
 
 
 
-pred_vec <- pred_list[2][[1]] %>% as.vector()
-
-auc <- auc(tst_data$y, pred_vec)
-
-pred_tib %>% mutate(vec_pred = map(.x = pred_tib, ~as.vector(.x))) %>% 
 
 
-                    auc = map(.x = vec_pred, ~ auc(tst_data$y, .x)))
 
-
-map_dbl(x in c(1:20), function(x) auc(tst_data$y, pred_tib[[1]][x]))
-
-x?map
