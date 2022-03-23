@@ -386,6 +386,91 @@ auc <- auc_calc_full(beta_est, bc_test)
 The AUC of the Newton-Raphson Model is `r auc`.
 
 
+## Function for Newton Rapshon Coefficeint Values Change plot
+
+```{r, fig.width=12, , fig.height=15}
+coeff_change_plot <- function(result_df, glm_fit){
+  nr1 <- data.frame(nr1)
+  nr1 <- nr1[-1,] %>% select(-i, -loglik, -step)
+
+
+  nr1 <- 
+    nr1 %>% mutate(i = paste0("Iteration", 1:nrow(nr1))) %>% 
+    relocate(i) %>% `rownames<-`(NULL)
+  
+  solution <-
+  data.frame(t(glm_fit$coefficients)) %>% 
+  janitor::clean_names() %>%
+  rename(intercept = x_intercept) %>%
+  mutate(i = "Solution")
+  
+  coeff_change_plot <-
+    nr1 %>%
+    janitor::clean_names() %>%
+    bind_rows(solution) %>%
+    pivot_longer(intercept:fractal_dimension_worst,
+                 names_to = "Predictors",
+                 values_to = "Coefficient_Values") %>%
+    mutate(i = fct_relevel(i, "Iteration1","Iteration2","Iteration3","Iteration4",
+                           "Iteration5","Iteration6","Iteration7","Iteration8",
+                           "Iteration9","Iteration10","Iteration11","Iteration12",
+                           "Iteration13","Iteration14")) %>%
+    ggplot(aes(x = i, y = Coefficient_Values, group = Predictors, color = Predictors)) +
+    geom_line() + 
+    theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5, face = "bold")) +
+    labs(y = "Coefficient Values",
+         title = "Newton Rapshon Coefficeint Values Change over Iteraions")
+  
+  return(coeff_change_plot)
+}
+
+coeff_change_plot(nr1, glm_fit)
+```
+
+## Function for Newton Rapshon Coefficeint Convergence plot
+
+```{r, fig.width=12, , fig.height=15}
+coeff_convergence_plot <- function(result_df, glm_fit){
+  nr1 <- data.frame(nr1)
+  nr1 <- nr1[-1,] %>% select(-i, -loglik, -step)
+
+
+  nr1 <- 
+    nr1 %>% mutate(i = paste0("Iteration", 1:nrow(nr1))) %>% 
+    relocate(i) %>% `rownames<-`(NULL)
+  
+  solution <-
+    data.frame(t(glm_fit$coefficients)) %>% 
+    janitor::clean_names() %>%
+    rename(intercept = x_intercept)  %>% 
+    pivot_longer(intercept:fractal_dimension_worst, 
+                 names_to = "Predictors", values_to = "Solution")
+  
+  coeff_convergence_plot <-
+    nr1 %>%
+    janitor::clean_names() %>%
+    pivot_longer(intercept:fractal_dimension_worst,
+                 names_to = "Predictors", 
+                 values_to = "Coefficient_Values") %>%
+    left_join(solution, by = "Predictors") %>%
+    mutate(i = fct_relevel(i, "Iteration1","Iteration2","Iteration3","Iteration4",
+                           "Iteration5","Iteration6","Iteration7","Iteration8",
+                           "Iteration9","Iteration10","Iteration11","Iteration12",
+                           "Iteration13","Iteration14")) %>%
+    mutate(Difference = Coefficient_Values - Solution) %>%
+    ggplot(aes(x = i, y = Difference, group = Predictors, color = Predictors)) +
+    geom_line() +
+    geom_point(aes(x = 14.06, y = 0), col = "lightblue") +
+    theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5, face = "bold")) +
+    labs(y = "Coefficient Values",
+         title = "Newton Rapshon Coefficeint Convergence over Iterations") 
+  
+  return(coeff_convergence_plot)
+}
+
+coeff_convergence_plot(nr1, glm_fit)
+```
+
 
 
 
