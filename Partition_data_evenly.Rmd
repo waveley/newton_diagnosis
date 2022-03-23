@@ -1,0 +1,209 @@
+---
+title: "Data_splitting"
+author: "Hun"
+date: '2022-03-23'
+output: pdf_document
+---
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(dplyr)
+library(kableExtra)
+```
+
+## Importing data
+
+```{r, echo = FALSE}
+data <-
+  read_csv("data/breast-cancer.csv", show_col_types = FALSE) %>%
+  janitor::clean_names() %>%
+  mutate(diagnosis = 1 * (diagnosis == "M")) %>% 
+  select(-area_mean, -area_worst, -perimeter_mean, -perimeter_worst
+         ,-perimeter_worst, -perimeter_se, -area_se, -concave_points_worst,
+         -concavity_mean, -texture_worst)
+```
+
+## Algorithm for splitting variables into training and testing set evenly
+
+```{r}
+# My goal is to use quantiles to split data evenly
+split <- function(variable, p) {
+  
+  #Case for categorical variable or small number of levels of continuosu variable
+  if (length(unique(variable)) < 10){
+    unique <- unique(variable)
+    unique_list <- list()
+
+    training_store <- vector()
+      
+    testing_store <- vector()
+    
+    
+    for (i in 1:length(unique)) {
+      unique_list[[i]] <- variable[variable %in% unique[i]]
+      
+      #To make sure all variables of training/testing have the same number
+      ifelse((i %% 2) == 1 && (length(variable)*0.8)%%1 > 0.5, 
+             index <- sample(1:length(unique_list[[i]]),
+                      ceiling(length(unique_list[[i]])*0.8),replace=FALSE),
+             index <- sample(1:length(unique_list[[i]]),
+                      floor(length(unique_list[[i]])*0.8),replace=FALSE))
+      #To make sure all variables of training/testing have the same number
+      ifelse((i %% 2) == 1 && (length(variable)*0.8)%%1 < 0.5, 
+             index <- sample(1:length(unique_list[[i]]),
+                      floor(length(unique_list[[i]])*0.8),replace=FALSE),
+             index <- sample(1:length(unique_list[[i]]),
+                      ceiling(length(unique_list[[i]])*0.8),replace=FALSE))
+
+      
+      training_store <- c(training_store, unique_list[[i]][index])
+      testing_store <- c(testing_store, unique_list[[i]][-index])
+    }
+    split <- list(training = training_store, testing = testing_store)
+  }
+  
+  else {
+  
+  #Case for continuous variable
+  variable <- sort(variable)
+  
+  #Using quantiles to split data evenly
+  smallest <- min(variable)
+  first_quantile <- variable[round(length(variable)*0.25, 0)]
+  second_quantile <- variable[round(length(variable)*0.5, 0)]
+  third_quantile <- variable[round(length(variable)*0.75, 0)]
+  largest <- max(variable)
+  
+  summary <- c(smallest, first_quantile, second_quantile, third_quantile, largest)
+  
+  training_data <- list()
+  testing_data <- list()
+  
+  training_store <- vector()
+  
+  testing_store <- vector()
+  
+  for(i in 1:(length(summary)-1)){
+    #To make sure all variables of training/testing have the same nummber
+    ifelse(i == (length(summary)-1), 
+             Q_data <- variable[variable>=summary[i] & variable<=summary[i+1]],
+             Q_data <- variable[variable>=summary[i] & variable<summary[i+1]])
+    #To make sure all variables of training/testing have the same nummber
+    ifelse((i %% 2) == 1, 
+             index <- sample(1:length(Q_data), ceiling(length(Q_data)*0.8), replace=FALSE),
+             index <- sample(1:length(Q_data), floor(length(Q_data)*0.8), replace=FALSE))
+   
+    
+    training_data[[i]] <- Q_data[index]
+    
+    testing_data[[i]] <- Q_data[-index]
+    
+    training_store <- c(training_store, training_data[[i]])
+    
+    testing_store <- c(testing_store, testing_data[[i]])
+  }
+  split <- list(training = training_store, testing = testing_store)
+  }
+ return(split)
+}
+```
+
+\newpage
+
+```{r}
+#Let's check if the algorithm works for continuous variable
+
+split1 <- split(data$radius_mean, 0.8)
+
+data_frame(mean = mean(split1$training), sd = sd(split1$training),
+           proportion = length(split1$training)/nrow(data))
+
+data_frame(mean = mean(split1$testing), sd = sd(split1$testing),
+           proportion = length(split1$testing)/nrow(data))
+
+#Looks good
+```
+
+
+
+
+```{r}
+#Let's check if the algorithm works for categorical variable
+split2 <- split(data$diagnosis, 0.8)
+
+data_frame(mean = mean(split2$training), sd = sd(split2$training),
+           proportion = length(split2$training)/length(data$radius_mean))
+
+data_frame(mean = mean(split2$testing), sd = sd(split2$testing),
+           proportion = length(split2$testing)/length(data$radius_mean))
+
+#Looks good
+```
+
+## Applying algorithm to get the training/testing data frame of entire data
+
+```{r}
+data_split <- function(data,split){
+  data_split <- map(data, split, 0.8)
+  training_list <- list()
+  testing_list <- list()
+  for (i in 1:length(data_split)) {
+    
+    training_list[[i]] <- data_split[[i]]$training
+    testing_list[[i]] <- data_split[[i]]$testing
+  }
+
+  names(training_list) <- names(data_split) 
+  names(testing_list) <- names(data_split) 
+  
+  training <- dplyr::bind_rows(training_list) %>% data.frame()
+  testing <- dplyr::bind_rows(testing_list) %>% data.frame()
+  
+  return(list(training, testing))
+}
+
+```
+
+## Combining result together to make it reader-frindly
+
+```{r}
+trainging_result <-
+  skimr::skim_without_charts(data_split(data,split)[1]) %>% data.frame() %>% 
+   select(2,5,6) %>% 
+  rename(training_mean = numeric.mean, training_sd = numeric.sd) %>%
+  mutate_if(is.numeric, ~round(.x, digits = 3)) %>%
+  mutate_if(is.numeric, ~format(.x, scientific = FALSE))
+
+ 
+testing_result <-
+  skimr::skim_without_charts(data_split(data,split)[2]) %>% 
+  select(2,5,6) %>%
+  rename(testing_mean = numeric.mean, testing_sd = numeric.sd) %>%
+  mutate_if(is.numeric, ~round(.x, digits = 3)) %>%
+  mutate_if(is.numeric, ~format(.x, scientific = FALSE))
+
+
+trainging_result %>% left_join(testing_result, by = "skim_variable") %>% kable()
+```
+
+$\\$
+
+```{r, echo = FALSE}
+data.frame(training_nrow = nrow(data_split(data,split)[1] %>% data.frame()), 
+           testing_nrow = nrow(data_split(data,split)[2] %>% data.frame()),
+           eighty_percent_data_nrow = nrow(data)*0.8, 
+           twenty_percent_data_nrow = nrow(data)*0.2) %>% kable()
+
+```
+
+
+
+
+
+
+
+
+
