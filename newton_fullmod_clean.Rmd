@@ -59,6 +59,15 @@ corrplot::corrplot(cor_cov_all,
                    diag = FALSE)
 ```
 
+```{r}
+corr_cross(bc_corr, # name of dataset
+  top = 25 # display top 10 couples of variables (by correlation coefficient)
+)  +
+  geom_text(aes(label =  round(corr,3)), hjust = 1.3) +
+  labs(title= "Figure 2: Ranked Cross-Correlations")
+```
+
+
 Yikes. Let's make some cuts ($r^2 > 0.9$) and reevaluate. To begin, we zoom in on our culprits.
 
 ```{r}

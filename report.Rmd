@@ -1,0 +1,110 @@
+---
+title: |
+  | P8160 - Breast Cancer Data:
+  | To lasso or to not lasso
+author: |
+  | Group ??
+  |
+  | Amy Pitts, Hun Lee, Jimmy Kelliher,
+  | Tucker Morgan, Waveley Qiu
+date: "2022-04-01"
+output:
+  pdf_document: default
+  
+header-includes:
+  - \usepackage{amsmath,amssymb,amsthm,amsfonts,bbm,graphics,enumitem}
+  - \usepackage{geometry,mathrsfs}
+  - \usepackage{tikz}
+  - \usepackage{pgfplots}
+  - \usetikzlibrary{shapes,arrows}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lares) # for the correlation plot 
+
+## loading in the full dataset. 
+bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+
+```
+
+
+\vspace{75mm}
+
+\begin{center}
+{\bf Abstract}
+\end{center}
+
+|        we will write an abstract eventually.
+
+\newpage
+# 1. Introduction
+
+## 1.1. Overview
+
+
+## 1.2. Objectives
+
+
+
+
+# 2. Methods
+
+
+## 2.1. Data Cleaning and Exploratory Analysis
+
+The data set of interest contains 569 rows and 33 columns all related to breast tissue images. Each entry of the table represent an individual patient. Of primary interest is the column containing information about patient diagnosis of cancer taking on values either malignant or benign. One column contains information about patient ID which will be removed from our dataset. The other 30 columns correspond to numerical information about the breast imaging. 
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+bc_corr <- bc %>% 
+  mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
+  relocate(y)  %>% 
+  select(-c(id, y, diagnosis))
+
+cor_cov_all <- cor(bc_corr)
+
+bad <- c(
+  "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
+  , "perimeter_se", "area_se"
+  , "concave points_worst", "concavity_mean"
+  , "texture_worst"
+)
+```
+
+In a quick exploration of the data it has been found that there is a high correlation between many of the variables. This is seen in **Figure 1**. The heat map correlation plot there are a lot of varaible with dark blue coloring representing a high correlation. High correlations can cause major issues with the methods we are going to use so understanding why there is high correlation in our data is important. 
+
+To explore the correlation more **Figure 2** shows the highest 25 correlation in our data.  We see that the highest correlation is between radius mean and perimeter mean with a correlation values of 0.998. In the graph there are 21 combinations of variables that achieve a correlation over 0.90. This is cause for major concern. We can break these 21 pairings into equivalance classes for further inspection. The first grouping that are all mutually correlated are  {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents the 15 correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_sd`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group  {`concavity_mean`,`concavity_worst`, `concave.point_worst`, `concave.point_mean`} together, and we find that the best variable  proxy is `concave.point_worst`.  Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` variables in our dataset.  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8}
+title = "Figure 1: Correlation Heat Plot of all Covariates"
+corrplot::corrplot(cor_cov_all, 
+                   method = "color",
+                   type = "lower", 
+                   insig = "blank",
+                   diag = FALSE,
+                   title=title,
+                   mar=c(0,0,1,0)) 
+```
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# this doesn't work in pdf files so it is not being run 
+corr_cross(bc_corr, # name of dataset
+  top = 25 # display top 10 couples of variables (by correlation coefficient)
+)  +
+  geom_text(aes(label =  round(corr,3)), hjust = 1.3) +
+  labs(title= "Figure 2: Ranked Cross-Correlations")
+```
+
+![](cor_rank.png)
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+```
+
+
+
+
+
+
