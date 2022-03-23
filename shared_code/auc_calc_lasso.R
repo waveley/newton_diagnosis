@@ -1,6 +1,7 @@
 ######################### AUC for LASSO #########################
 
-load("./test_matrix.RData")
+#load("./test_matrix.RData")
+
 library(pROC)
 
 auc_calc_lasso <- function(beta_matrix, tst_data){
@@ -37,4 +38,4 @@ auc_calc_lasso <- function(beta_matrix, tst_data){
 }
 
 
-auc_calc_lasso(beta_matrix, tst_data)
+#auc_calc_lasso(beta_matrix, tst_data)

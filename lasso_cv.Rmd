@@ -14,6 +14,7 @@ library(glmnet)
 source("./shared_code/partition.R")
 source("./shared_code/data_prep.R")
 source("./shared_code/lasso.R")
+source("./shared_code/auc_calc_lasso.R")
 
 part_bc <- partition(p = 0.8, data = bc)
 
@@ -151,9 +152,8 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     # calculating AUC, updates required, add AUC to end of i-th matrix and store
     # rbind matrices together, group on lambda and take mean AUC from there
     
-    trn_roc <- pROC::roc(tst_set$diagnosis, trn_pred)
-    
-    auc_list[[i]] = trn_roc$auc
+    trn_roc <- auc_calc_lasso(tst_set$diagnosis, trn_pred)
+    auc_list[[i]] = trn_roc
   }
     # calculating mean cv auc for each lambda
     auc_df = data.frame("auc" = do.call(rbind, auc_list))
