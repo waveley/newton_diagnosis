@@ -13,6 +13,8 @@
 #
 # ##########
 
+epsilon <- 10^(-5)
+
 lasso <- function(x, y, lambda_vec){
   
     X <- x %>% mutate(intercept = 1) %>% as.matrix()
@@ -86,7 +88,6 @@ lasso <- function(x, y, lambda_vec){
 
 #### testing function ###
 
-#epsilon <- 10^(-5)
 
 #n    <- nrow(data)
 #X    <- scale(data[ , -c(1, 2)])

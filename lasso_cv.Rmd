@@ -11,6 +11,7 @@ library(glmnet)
 ```
 
 ```{r data import and partition, message = FALSE}
+source("./shared_code/setup.R")
 source("./shared_code/partition.R")
 source("./shared_code/data_prep.R")
 source("./shared_code/lasso.R")
@@ -37,7 +38,7 @@ bc_trn_folds <-
   select(-fold_p)
 ```
 
-```{r cv glmnet implementation, message = FALSE, warning = FALSE}
+```{r cv glmnet implementation, message = FALSE, warning = FALSE, eval=FALSE}
 set.seed(100)
 
 X <- bc_trn_folds[, -c(1,32)]
@@ -102,7 +103,7 @@ cv_function <- function(k = 5, training, func, lambda_vec){
 cv_function(training = bc_trn_folds, func = ex_func, lambda_vec = lambda_vec)
 ```
 
-```{r glmnet example, include = FALSE}
+```{r glmnet example, include = FALSE, eval=FALSE}
 X_tst <- as.matrix(bc_tst[,-1])
 
 ex_pred <- predict(ex_fit,
@@ -114,7 +115,7 @@ ex_roc <- pROC::roc(tst_set$diagnosis, ex_pred)
 
 The cross-validation function seems to work as intended, let's try updating to work with Jimmy's lasso function.
 
-```{r cv jimmy}
+```{r cv jimmy, warning=FALSE, message=FALSE}
 cv_jt <- function(k = 5, training, func, lambda_vec){
   
   auc_list = list()
@@ -127,7 +128,6 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
   
   for (i in 1:k) {
     
-    pb$tick()
     
     # this will identify the training set as not i
     trn_set = 
@@ -161,6 +161,8 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     
     auc_list = bind_rows(auc_list, trn_roc)
    # auc_list[[i]] = trn_roc
+    
+    pb$tick()
   }
   
   
@@ -180,7 +182,9 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
   return(res)
 }
 
-lambda_vec <- seq(0, 0.4, length = 5) # lambda vector for testing
-cv_jt(k=5, training = bc_trn_folds, func = lasso, lambda_vec = lambda_vec)
+lambda_vec <- rep(seq(10, 2, -1), 4) / c(rep(1, 9), rep(10, 9), rep(100, 9), rep(1000, 9))
+
+cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = lasso, lambda_vec = lambda_vec)
+cv_res %>% knitr::kable()
 ```
 
