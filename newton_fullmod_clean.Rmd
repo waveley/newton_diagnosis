@@ -130,18 +130,6 @@ bad_vars <- c(
   , "texture_worst"
 )
 
-covariates <- 
-  bc %>% 
-  select(-c(id, y, diagnosis)) %>%
-  dplyr::select(-contains("area")) %>%
-  dplyr::select(-contains("perimeter")) %>%
-  dplyr::select(-ends_with("_worst")) %>%
-  dplyr::select(-c("concavity_mean", 
-                   "compactness_mean", 
-                   "concave.points_mean", 
-                   "compactness_se", 
-                   "concave.points_se"))
-
 covariates <-
   bc %>% 
   select(-c(id, y, diagnosis)) %>%
@@ -171,7 +159,7 @@ We want to establish logistic model using all variables in the dataset. We will 
 The likelihood function for a logistic model is defined as follows:
 
 $$
-f(\beta_0, \beta_1,...,\beta_{30}) = \sum_{i=1}^n \left(Y_i\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right) - \log(1+e^{\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right)}\right)
+f(\beta_0, \beta_1,...,\beta_{p}) = \sum_{i=1}^n \left(Y_i\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right) - \log(1+e^{\left(\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}\right)}\right)
 $$
 
 Let $\pi_i = \frac{e^{\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}}}{1+e^{\beta_0 + \sum_{j=1}^{p} \beta_jx_{ij}}}$. Then, the gradient of this function is defined as follows:
