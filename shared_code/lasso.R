@@ -24,12 +24,12 @@ lasso <- function(x, y, lambda_vec){
     beta <- rep(0, ncol(X))
     beta_matrix <- t(c(NA, beta))
     
-    pb <- progress_bar$new(
-      format = " lasso-ing [:bar] :percent eta: :eta",
-      total = length(lambda_vec), clear = FALSE, width = 60)
+    # pb <- progress_bar$new(
+    #  format = " lasso-ing [:bar] :percent eta: :eta",
+    #  total = length(lambda_vec), clear = FALSE, width = 60)
     
     for (lambda in lambda_vec) {
-      pb$tick()
+    #  pb$tick()
       outer_term <- 0
       outer <- 1
       while (outer_term < 1) {

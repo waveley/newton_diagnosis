@@ -11,12 +11,8 @@ library(glmnet)
 ```
 
 ```{r data import and partition, message = FALSE}
-
-
 source("./shared_code/partition.R")
 source("./shared_code/data_prep.R")
-
-
 
 part_bc <- partition(p = 0.8, data = bc)
 
@@ -122,23 +118,35 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
   auc_list = list()
   mean_auc_list = list()
   # we have a for loop to iterate over each fold, k = 5 here
-  for (i in 1:k){
+  
+  pb <- progress_bar$new(
+      format = " folding [:bar] :percent eta: :eta",
+      total = k, clear = FALSE, width = 60)
+  
+  for (i in 1:k) {
+    
+    pb$tick()
+    
     # this will identify the training set as not i
     trn_set = 
       training %>% 
       filter(fold_id != i) %>% 
       select(-fold_id)
+    
     # and this assigns i to be the test set
     tst_set =
       training %>% 
       filter(fold_id == i) %>% 
       select(-fold_id)
+    
     # making matrices
     X_trn <- as.matrix(trn_set[,-1])
     X_tst <- as.matrix(tst_set[,-1])
     Y_trn <- trn_set$diagnosis
+    
     # fitting our function based on training set
     trn_fit = func(x = X_trn, y = Y_trn, lambda_vec = lambda_vec)
+    
     # calculating AUC, updates required, add AUC to end of i-th matrix and store
     # rbind matrices together, group on lambda and take mean AUC from there
     
@@ -150,10 +158,14 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     auc_df = data.frame("auc" = do.call(rbind, auc_list))
     mean_auc = mean(auc_df$auc)
     mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
+    
   # creating dataframe to show lambda values and corresponding mean AUC
   res = as.data.frame(do.call(rbind, mean_auc_list))
   
   return(res)
 }
+
+lambda_vec <- seq(0, 0.4, length = 5) # lambda vector for testing
+cv_jt(k=5, training = bc_trn, func = lasso, lambda_vec = lambda_vec)
 ```
 
