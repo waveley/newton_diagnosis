@@ -1,6 +1,15 @@
 ##################
 #
-# LASSO Helper Functions
+# This file contains four lasso helper functions:
+# > logistic: returns logit of input x
+# > p_adj: probability adjustment function.
+#          pulls input probability to 0 or 1 if 
+#          big/small enough (determined by epsilon).
+#          otherwise, returns input probability.
+# > w_adj: weight adjustment function
+#          sends weight to epsilon if input probability is 
+#          big/small enough (determined by epsilon)
+#          otherwise, return p*(1-p).
 #
 ##################
 

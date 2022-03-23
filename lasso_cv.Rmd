@@ -11,12 +11,12 @@ library(glmnet)
 ```
 
 ```{r data import and partition, message = FALSE}
-bc <- 
-  read_csv("./data/breast-cancer.csv") %>% 
-  mutate(diagnosis = 1 *(diagnosis == "M")) %>% 
-  select(-id)
+
 
 source("./shared_code/partition.R")
+source("./shared_code/data_prep.R")
+
+
 
 part_bc <- partition(p = 0.8, data = bc)
 
