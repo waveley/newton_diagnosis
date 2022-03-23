@@ -460,9 +460,9 @@ coeff_convergence_plot <- function(result_df, glm_fit){
     mutate(Difference = Coefficient_Values - Solution) %>%
     ggplot(aes(x = i, y = Difference, group = Predictors, color = Predictors)) +
     geom_line() +
-    geom_point(aes(x = 14.06, y = 0), col = "lightblue") +
+    geom_point(aes(x = 14.05, y = 0), col = "lightblue") +
     theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5, face = "bold")) +
-    labs(y = "Coefficient Values",
+    labs(y = "Difference between coefficient values and solution",
          title = "Newton Rapshon Coefficeint Convergence over Iterations") 
   
   return(coeff_convergence_plot)
