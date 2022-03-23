@@ -39,7 +39,7 @@ bc_trn_folds <-
   select(-fold_p)
 ```
 
-```{r cv implementation, message = FALSE, warning = FALSE}
+```{r cv glmnet implementation, message = FALSE, warning = FALSE}
 set.seed(100)
 
 X <- bc_trn_folds[, -c(1,32)]
@@ -56,7 +56,7 @@ ex_func <- function(x, y, lambda_vec){
          family = "binomial"(link = "logit"))
 }
 
-ex_func(x = X, y = Y, lambda_vec = 0) %>% coef() # just for example, not stored
+ex_fit <- ex_func(x = X, y = Y, lambda_vec = 0) #%>% coef() # just for example, not stored
 
 cv_function <- function(k = 5, training, func, lambda_vec){
   
@@ -104,15 +104,56 @@ cv_function <- function(k = 5, training, func, lambda_vec){
 cv_function(training = bc_trn_folds, func = ex_func, lambda_vec = lambda_vec)
 ```
 
-The cross-validation function seems to work as intended, but I found that the mean AUC dropped to 0.5 (no discrimination) at a seemingly low lambda value of 0.4. I'll run `glmnet` below to show that all coefficients drop out at lambda = 0.4.
+```{r glmnet example, include = FALSE}
+X_tst <- as.matrix(bc_tst[,-1])
 
-```{r glmnet example}
-glmnet(x = X, y = Y,
-       standardize = TRUE,
-       alpha = 1,
-       lambda = 0.4,
-       family = "binomial"(link = "logit")) %>% 
-  coef()
+ex_pred <- predict(ex_fit,
+                   newx = X_tst,
+                   type = "response")
+
+ex_roc <- pROC::roc(tst_set$diagnosis, ex_pred)
 ```
 
-Bizarre!
+The cross-validation function seems to work as intended, let's try updating to work with Jimmy's lasso function.
+
+```{r cv jimmy}
+cv_jt <- function(k = 5, training, func, lambda_vec){
+  
+  auc_list = list()
+  mean_auc_list = list()
+  # we have a for loop to iterate over each fold, k = 5 here
+  for (i in 1:k){
+    # this will identify the training set as not i
+    trn_set = 
+      training %>% 
+      filter(fold_id != i) %>% 
+      select(-fold_id)
+    # and this assigns i to be the test set
+    tst_set =
+      training %>% 
+      filter(fold_id == i) %>% 
+      select(-fold_id)
+    # making matrices
+    X_trn <- as.matrix(trn_set[,-1])
+    X_tst <- as.matrix(tst_set[,-1])
+    Y_trn <- trn_set$diagnosis
+    # fitting our function based on training set
+    trn_fit = func(x = X_trn, y = Y_trn, lambda_vec = lambda_vec)
+    # calculating AUC, updates required, add AUC to end of i-th matrix and store
+    # rbind matrices together, group on lambda and take mean AUC from there
+    
+    trn_roc <- pROC::roc(tst_set$diagnosis, trn_pred)
+    
+    auc_list[[i]] = trn_roc$auc
+  }
+    # calculating mean cv auc for each lambda
+    auc_df = data.frame("auc" = do.call(rbind, auc_list))
+    mean_auc = mean(auc_df$auc)
+    mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
+  # creating dataframe to show lambda values and corresponding mean AUC
+  res = as.data.frame(do.call(rbind, mean_auc_list))
+  
+  return(res)
+}
+```
+
