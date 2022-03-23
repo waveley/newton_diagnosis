@@ -118,7 +118,7 @@ The cross-validation function seems to work as intended, let's try updating to w
 cv_jt <- function(k = 5, training, func, lambda_vec){
   
   auc_list = list()
-  mean_auc_list = list()
+  # mean_auc_list = list()
   # we have a for loop to iterate over each fold, k = 5 here
   
   pb <- progress_bar$new(
@@ -139,12 +139,15 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     tst_set =
       training %>% 
       filter(fold_id == i) %>% 
-      select(-fold_id)
+      select(-fold_id) %>%
+      rename(y = diagnosis)
     
     # making matrices
     X_trn <- trn_set[,-1]
-    X_tst <- tst_set[,-1]
+   # X_tst <- tst_set[,-1]
     Y_trn <- trn_set$diagnosis
+    
+    
     
     # fitting our function based on training set
     trn_fit = func(x = X_trn, y = Y_trn, lambda_vec = lambda_vec)
@@ -152,16 +155,27 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     # calculating AUC, updates required, add AUC to end of i-th matrix and store
     # rbind matrices together, group on lambda and take mean AUC from there
     
-    trn_roc <- auc_calc_lasso(tst_set$diagnosis, trn_pred)
-    auc_list[[i]] = trn_roc
-  }
-    # calculating mean cv auc for each lambda
-    auc_df = data.frame("auc" = do.call(rbind, auc_list))
-    mean_auc = mean(auc_df$auc)
-    mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
+    trn_roc <- auc_calc_lasso(trn_fit, tst_set)
     
+    trn_roc <- trn_roc %>% filter(!is.na(lambda))
+    
+    auc_list = bind_rows(auc_list, trn_roc)
+   # auc_list[[i]] = trn_roc
+  }
+  
+  
+   # calculating mean cv auc for each lambda
+   # auc_df = data.frame("auc" = do.call(rbind, auc_list))
+   #  mean_auc = mean(auc_df$auc)
+   # mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
+    
+  res <- 
+    auc_list %>% 
+    group_by(lambda) %>%
+    summarise(mean_auc = mean(auc_vals))
+  
   # creating dataframe to show lambda values and corresponding mean AUC
-  res = as.data.frame(do.call(rbind, mean_auc_list))
+  # res = as.data.frame(do.call(rbind, mean_auc_list))
   
   return(res)
 }
