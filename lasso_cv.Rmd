@@ -13,6 +13,7 @@ library(glmnet)
 ```{r data import and partition, message = FALSE}
 source("./shared_code/partition.R")
 source("./shared_code/data_prep.R")
+source("./shared_code/lasso.R")
 
 part_bc <- partition(p = 0.8, data = bc)
 
@@ -140,8 +141,8 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
       select(-fold_id)
     
     # making matrices
-    X_trn <- as.matrix(trn_set[,-1])
-    X_tst <- as.matrix(tst_set[,-1])
+    X_trn <- trn_set[,-1]
+    X_tst <- tst_set[,-1]
     Y_trn <- trn_set$diagnosis
     
     # fitting our function based on training set
@@ -166,6 +167,6 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
 }
 
 lambda_vec <- seq(0, 0.4, length = 5) # lambda vector for testing
-cv_jt(k=5, training = bc_trn, func = lasso, lambda_vec = lambda_vec)
+cv_jt(k=5, training = bc_trn_folds, func = lasso, lambda_vec = lambda_vec)
 ```
 
