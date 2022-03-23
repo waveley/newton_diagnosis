@@ -259,108 +259,133 @@ print(results %>% knitr::kable())
 ## Second Attempt with Actual Data
 
 ```{r}
-epsilon <- 10^(-5)
+logistic_lasso <- function(
+  # a numeric design matrix or data frame with named columns
+    inputs
+  # a vector of outputs; we must have length(output) == nrow(inputs)
+  , output
+  # a vector of descending penalization factors, ideally on a logarithmic scale
+  , lambda_vec
+  # standardize inputs using scale
+  , standardize   = TRUE
+  # a buffer to prevent divergence when fitted probabilities approach 0 or 1
+  , epsilon       = 10^-8
+  # maximum number of updates to quadratic approximation of likelihood
+  , outer_maxiter =  100
+  # maximum number of cycles for coordinate descent given quadratic approximation
+  , inner_maxiter = 1000
+  # tolerance for convergence of coordinate descent
+  , tolerance     = 10^-12
+) {
 
-n    <- nrow(data)
-#X    <- scale(data[ , -c(1, 2)])
-X    <- data[ , -c(1, 2)]
-X    <- as.matrix(cbind(rep(1, n), X))
-y    <- data$diagnosis
+  # standardize data unless otherwise specified
+  if(standardize) {
 
-beta <- rep(0, ncol(X))
-lambda_vec <- exp(seq(log(0.4), log(0.4/1000), -0.2))
-lambda_vec <- rep(seq(10, 2, -1), 4) / c(rep(1, 9), rep(10, 9), rep(100, 9), rep(1000, 9))
-lambda_vec <- exp(seq(log(0.4), log(0.4/10), -0.1))
-lambda_vec <- seq(0.40, 0.20, -0.01)
+    # format data
+    X <- as.matrix(cbind(rep(1, nrow(inputs)), scale(inputs)))
+    y <- output  
 
-# initialize parameters
-beta <- rep(0, ncol(X))
-beta_matrix <- t(c(NA, beta))
+  } else {
 
-for(lambda in lambda_vec) {
+    # format data
+    X <- as.matrix(cbind(rep(1, nrow(inputs)), inputs))
+    y <- output    
 
-  outer_term <- 0
-  outer <- 1
-  while(outer_term < 1) {
-  
-  #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
-  #w <- map_dbl(p, w_adj, epsilon)
-  #z <- X %*% beta + (y - p) / w
-  
-    terminate <- 0
-    iter <- 1
-    while(terminate < 1) {
-    
-      beta_old <- beta
+  }
 
+  # initialize coefficients at origin
+  beta    <- rep(0, ncol(X))
+  beta_df <- NULL
+
+  # begin lambda decrement
+  for(lambda in lambda_vec) {
+
+    outer_term <- 0
+    outer_iter <- 1
+
+    # update quadratic approximation, execute coordinate descent until convergence, repeat
+    while(outer_term < 1) {
+
+      # update quadratic approximation; i.e., taylor expand around current estimates  
       p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
       w <- map_dbl(p, w_adj, epsilon)
       z <- X %*% beta + (y - p) / w
 
-      for(k in 1:ncol(X)) {
-        x_k    <- X[ , k]
-        x_notk <- X[ , -k]
-        b_notk <- beta[-k]
+      inner_term <- 0
+      inner_iter <- 1
 
-        # un-penalized coefficient update
-        b_k_temp <- sum(w * (z - x_notk %*% b_notk) * x_k) / sum(w * x_k^2)
-        # shrinkage update
-        b_k      <- S(b_k_temp, lambda * (k > 1) / mean(w * x_k^2))
-        # update beta vector along with other parameters
-        beta[k] <- b_k
-        #p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
-        #w <- map_dbl(p, w_adj, epsilon)
-        #z <- X %*% beta + (y - p) / w
+      # given current quadratic approximation, execute coordinate descent
+      while(inner_term < 1) {
+
+        beta_old <- beta
+
+        # execute a complete cycle of coordinate descent
+        for(k in 1:ncol(X)) {
+
+          # un-penalized coefficient update
+          b_k_temp <- sum(w * (z - X[ , -k] %*% beta[-k]) * X[ , k]) / sum(w * X[ , k]^2)
+          # shrinkage update
+          b_k      <- S(b_k_temp, (k > 1) * lambda / mean(w * X[ , k]^2))
+          # update coefficient vector
+          beta[k] <- b_k
+
+        }
+
+        inner_iter <- inner_iter + 1
+
+        if(inner_iter == inner_maxiter | max(abs(beta - beta_old)) < tolerance) {
+
+          inner_term <- 1
+      
+        }
+
       }
 
-      iter <- iter + 1
+      outer_iter <- outer_iter + 1
 
-      if(iter == 100 | max(abs(beta - beta_old)) < 10^(-10)) {
-        terminate <- 1
-      }
+      if(outer_iter == outer_maxiter | inner_iter == 2) {
 
-    }
-
-    outer <- outer + 1
-  
-    if(outer == 100 | iter == 2) {
-        print(lambda)
         outer_term <- 1
+
+      }
+
     }
+
+    beta_df <- rbind(beta_df, t(beta))
 
   }
 
-  # true estimates from glmnet
-  #fit <- glmnet(
-  #  X
-  #  , y
-  #  , family = "binomial"
-  #  , standardize = FALSE
-  #  , lambda = lambda
-  #  , thresh = 10^-12
-  #  , maxit  = 10^6
-  #)
+  # format data frame of coefficient estimates
+  colnames(beta_df) <- c("intercept", names(inputs))
+  beta_df <- as_tibble(beta_df)
 
-  # results
-  #results <- tibble(
-  #    Variable   = 1:length(beta)
-  #  , Name       = c("intercept", names(data[ , -c(1, 2)]))
-  #  , Jimmy      = beta
-  #  , GLMNET     = as.vector(fit$beta[ , ncol(fit$beta)])
-  #  , Difference = abs(Jimmy - GLMNET)
-  #  , Change     = (Jimmy - GLMNET) / GLMNET
-  #) %>%
-  #  filter(Jimmy != 0 | GLMNET != 0)
+  # extract number of variables selected for each lambda
+  selected_vec <- apply(beta_df, 1, function(x) sum(x != 0) - 1)
 
-  #print(paste0("lambda = ", lambda))
-  #print(results %>% knitr::kable())
-
-  beta_matrix <- rbind(beta_matrix, t(c(lambda, beta)))
+  # output results
+  list(lambda = lambda_vec, beta = beta_df, selected = selected_vec)
 
 }
 ```
 
 
 ```{r}
-results %>% knitr::kable()
+bad_vars <- c(
+    "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
+  , "perimeter_se", "area_se"
+  , "concave points_worst", "concavity_mean"
+  , "texture_worst"
+)
+my_inputs <- data %>% select(-bad_vars) %>% select(-c(1, 2))
+my_output <- data$diagnosis
+
+# identify minimum lambda value for which all coefficients are zero
+lambda_max <- max(t(scale(as.matrix(my_inputs))) %*% y) / nrow(my_inputs)
+# set lambda_min based on scaled data
+lambda_min <- 0.0001
+# define vector of lambdas
+lambda_seq <- exp(seq(log(lambda_max), log(lambda_min), length.out = 100))
+
+output <- logistic_lasso(my_inputs, my_output, lambda_seq, standardize = TRUE)
+output
 ```
