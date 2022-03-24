@@ -383,6 +383,17 @@ glmnet_fit <- glmnet(x = xdat, y = trn_data$y, family="binomial", lambda = 0)
 glmnet_est <- as.vector(coef(glmnet_fit)) %>% round(3) 
 ```
 
+
+```{r}
+# 
+# xdat = as.matrix(bc %>% select(-y))
+# glmnet_fit <- glmnet(x = xdat, y = bc$diagnosis, family="binomial", nlambda = 100)
+# summary(glmnet_fit)
+# coef(glmnet_fit)
+# glmnet_est <- as.vector(coef(glmnet_fit)) %>% round(3) 
+```
+
+
 ### Jimmy's Method (LASSO) but lambda = 0
 
 ```{r}
