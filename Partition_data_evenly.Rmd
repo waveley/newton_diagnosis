@@ -46,17 +46,17 @@ split <- function(variable, p) {
       unique_list[[i]] <- variable[variable %in% unique[i]]
       
       #To make sure all variables of training/testing have the same number
-      ifelse((i %% 2) == 1 && (length(variable)*0.8)%%1 > 0.5, 
+      ifelse((i %% 2) == 1 && (length(variable)*p)%%1 > 0.5, 
              index <- sample(1:length(unique_list[[i]]),
-                      ceiling(length(unique_list[[i]])*0.8),replace=FALSE),
+                      ceiling(length(unique_list[[i]])*p),replace=FALSE),
              index <- sample(1:length(unique_list[[i]]),
-                      floor(length(unique_list[[i]])*0.8),replace=FALSE))
+                      floor(length(unique_list[[i]])*p),replace=FALSE))
       #To make sure all variables of training/testing have the same number
-      ifelse((i %% 2) == 1 && (length(variable)*0.8)%%1 < 0.5, 
+      ifelse((i %% 2) == 1 && (length(variable)*p)%%1 < 0.5, 
              index <- sample(1:length(unique_list[[i]]),
-                      floor(length(unique_list[[i]])*0.8),replace=FALSE),
+                      floor(length(unique_list[[i]])*p),replace=FALSE),
              index <- sample(1:length(unique_list[[i]]),
-                      ceiling(length(unique_list[[i]])*0.8),replace=FALSE))
+                      ceiling(length(unique_list[[i]])*p),replace=FALSE))
 
       
       training_store <- c(training_store, unique_list[[i]][index])
@@ -93,8 +93,8 @@ split <- function(variable, p) {
              Q_data <- variable[variable>=summary[i] & variable<summary[i+1]])
     #To make sure all variables of training/testing have the same nummber
     ifelse((i %% 2) == 1, 
-             index <- sample(1:length(Q_data), ceiling(length(Q_data)*0.8), replace=FALSE),
-             index <- sample(1:length(Q_data), floor(length(Q_data)*0.8), replace=FALSE))
+             index <- sample(1:length(Q_data), ceiling(length(Q_data)*p), replace=FALSE),
+             index <- sample(1:length(Q_data), floor(length(Q_data)*p), replace=FALSE))
    
     
     training_data[[i]] <- Q_data[index]
@@ -146,8 +146,8 @@ data_frame(mean = mean(split2$testing), sd = sd(split2$testing),
 ## Applying algorithm to get the training/testing data frame of entire data
 
 ```{r}
-data_split <- function(data,split){
-  data_split <- map(data, split, 0.8)
+data_split <- function(data,split, p){
+  data_split <- map(data, split, p)
   training_list <- list()
   testing_list <- list()
   for (i in 1:length(data_split)) {
@@ -171,7 +171,7 @@ data_split <- function(data,split){
 
 ```{r}
 trainging_result <-
-  skimr::skim_without_charts(data_split(data,split)[1]) %>% data.frame() %>% 
+  skimr::skim_without_charts(data_split(data,split, 0.8)[1]) %>% data.frame() %>% 
    select(2,5,6) %>% 
   rename(training_mean = numeric.mean, training_sd = numeric.sd) %>%
   mutate_if(is.numeric, ~round(.x, digits = 3)) %>%
@@ -179,7 +179,7 @@ trainging_result <-
 
  
 testing_result <-
-  skimr::skim_without_charts(data_split(data,split)[2]) %>% 
+  skimr::skim_without_charts(data_split(data,split, 0.8)[2]) %>% 
   select(2,5,6) %>%
   rename(testing_mean = numeric.mean, testing_sd = numeric.sd) %>%
   mutate_if(is.numeric, ~round(.x, digits = 3)) %>%
@@ -192,8 +192,8 @@ trainging_result %>% left_join(testing_result, by = "skim_variable") %>% kable()
 $\\$
 
 ```{r, echo = FALSE}
-data.frame(training_nrow = nrow(data_split(data,split)[1] %>% data.frame()), 
-           testing_nrow = nrow(data_split(data,split)[2] %>% data.frame()),
+data.frame(training_nrow = nrow(data_split(data,split, 0.8)[1] %>% data.frame()), 
+           testing_nrow = nrow(data_split(data,split, 0.8)[2] %>% data.frame()),
            eighty_percent_data_nrow = nrow(data)*0.8, 
            twenty_percent_data_nrow = nrow(data)*0.2) %>% kable()
 
