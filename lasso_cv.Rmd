@@ -208,7 +208,7 @@ cv_jt <- function(k = 5, training, func, lambda_list){
       max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda)
       lam_start <- max_auc_lam + 2*abs(lam_step)
       lam_stop <- max_auc_lam - 2*abs(lam_step)
-      lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(lambda_vec)
+      lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
     }  
  }
   
