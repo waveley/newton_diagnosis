@@ -1,0 +1,68 @@
+---
+title: |
+  | P8160 - Breast Cancer Data:
+  | To lasso or to not lasso
+author: |
+  | Amy Pitts, Hun Lee, Jimmy Kelliher,
+  | Tucker Morgan, and Waveley Qiu
+date: "2022-03-28"
+output:
+  beamer_presentation:
+    colortheme: "dolphin"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Motivation
+
+
+## Data 
+
+
+## Correlation (oh no)
+
+
+## Remaining Variables
+
+Talk about test and train split 
+
+
+## Full Model (Newton-Raphson)
+
+All the math 
+
+
+## Full Model (Newton-Raphson)
+
+
+probs some more math 
+
+## Optimal Model (Logistic LASSO)
+
+also going to be some math 
+
+
+## Optimal Model (Logistic LASSO)
+
+more math 
+
+## 5-fold Cross Validation 
+
+
+## Cross Validation Results 
+
+Best $\lambda$ 
+
+
+## Coefficient Comparison 
+
+
+## AUC 
+
+
+## Discussion 
+
+
+
