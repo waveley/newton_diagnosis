@@ -126,7 +126,7 @@ lambda_init <- function(start, stop, step, func = identity){
   return(lambda_vec)
 }
 
-cv_jt <- function(k = 5, training, func, lambda_list){
+cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
   
   lam_start <- lambda_list[[1]]
   lam_stop <- lambda_list[[2]]
@@ -218,8 +218,8 @@ cv_jt <- function(k = 5, training, func, lambda_list){
   
     if (del_too_many_var > 0) {
       max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda) %>% mean()
-      lam_start <- log(max_auc_lam) + 2*abs(lam_step)
-      lam_stop <- log(max_auc_lam) - 2*abs(lam_step)
+      lam_start <- lam_start_stop_func(max_auc_lam) + 2*abs(lam_step)
+      lam_stop <- lam_start_stop_func(max_auc_lam) - 2*abs(lam_step)
       lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
     }  
  }
@@ -243,7 +243,7 @@ cv_jt <- function(k = 5, training, func, lambda_list){
 
 lambda_list <- list(log(0.4), log(0.0001), -(log(0.4) - log(0.0001))/100, exp)
 
-cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = logistic_lasso, lambda_list = lambda_list)
+cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = logistic_lasso, lam_start_stop_func = log, lambda_list = lambda_list)
 
 cv_res[[1]] %>% knitr::kable()
 cv_res[[2]] %>% knitr::kable()
