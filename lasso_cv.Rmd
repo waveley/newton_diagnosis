@@ -122,7 +122,7 @@ identity <- function(x){
 }
 
 lambda_init <- function(start, stop, step, func = identity){
-  lambda_vec <- seq(start, stop, step) %>% func()
+  lambda_vec <- func(seq(start, stop, step))
   return(lambda_vec)
 }
 
@@ -145,20 +145,26 @@ cv_jt <- function(k = 5, training, func, lambda_list){
   out_res <- list()
  
  while (del_too_many_var > 0) {
+ print("working")
   
  lam_count <- lam_count + 1
  
   # saving lambda vector parameters
  cur_lam_list <- tibble(lam_count, lam_start, lam_stop, lam_step)
-     
  
  lam_list <- bind_rows(lam_list, cur_lam_list) 
  
  new_lambda_vec <- lambda_init(lam_start, lam_stop, lam_step, lam_func)
  lasso_list <- list()
  auc_list <- list()
+
+ pb <- progress_bar$new(
+    format = " lasso-ing [:bar] :percent eta: :eta",
+    total = 5, clear = FALSE, width = 60)
  
   for (i in 1:k) {
+ 
+    pb$tick()
     
     # this will identify the training set as not i
     trn_set = 
@@ -177,8 +183,12 @@ cv_jt <- function(k = 5, training, func, lambda_list){
     X_trn <- trn_set[,-1]
     Y_trn <- trn_set$diagnosis
     
+    print("about to lasso")
+    
     # lasso_list    
     lasso_list <- func(inputs = X_trn, output = Y_trn, lambda_vec = new_lambda_vec)
+    
+    print("done with lasso")
     
     lasso_lambda <- lasso_list[[1]]
     lasso_beta <- lasso_list[[2]]
@@ -204,10 +214,12 @@ cv_jt <- function(k = 5, training, func, lambda_list){
   
   del_too_many_var <- sum(na.omit(res$num_dropped_vars) > 1)
   
+  #del_too_many_var <- 0
+  
     if (del_too_many_var > 0) {
-      max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda)
-      lam_start <- max_auc_lam + 2*abs(lam_step)
-      lam_stop <- max_auc_lam - 2*abs(lam_step)
+      max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda) %>% mean()
+      lam_start <- log(max_auc_lam) + 2*abs(lam_step)
+      lam_stop <- log(max_auc_lam) - 2*abs(lam_step)
       lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
     }  
  }
@@ -221,11 +233,20 @@ cv_jt <- function(k = 5, training, func, lambda_list){
 
 # test lambda list
 #lambda_list <- list(0.4, 0.20, -0.01, identity)
-lambda_list <- list(0.4, 0.20, -0.01, identity)
+
+# identify minimum lambda value for which all coefficients are zero
+# lambda_max <- max(t(scale(as.matrix(my_inputs))) %*% y) / nrow(my_inputs)
+# set lambda_min based on scaled data
+# lambda_min <- 0.0001
+# define vector of lambdas
+# lambda_seq <- exp(seq(log(lambda_max), log(lambda_min), length.out = 100))
+
+lambda_list <- list(log(0.4), log(0.0001), -(log(0.4) - log(0.0001))/100, exp)
 
 cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = logistic_lasso, lambda_list = lambda_list)
 
 cv_res[[1]] %>% knitr::kable()
 cv_res[[2]] %>% knitr::kable()
 ```
+
 
