@@ -50,28 +50,21 @@ Methods:
 - The Covariates include information such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
 
 
-## Correlations Between Variables
+## Figure 1: Ranked Cross-Correlations
 
-![](cor_rank.png){width=80%}
+![](cor_rank_no_title.png){width=80%}
 
+## Figure 1: Ranked Cross-Correlations
 
-## Correlation 
+![](cor_rank_firsteq.png){width=80%}
 
-The correlation pairs can be grouped into equivalence classes. To identify the best proxy for this grouping we look at the highest mean correlation
+Best Representative `radius_worst` 
 
-- First: {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}   
-  - Winner: `radius_worst`. 
-- Second: {`radius_sd`, `perimeter_se`, `area_se`}.  
-  - Winner: `radius_se`. 
-- Third: {`concavity_mean`,`concavity_worst`, `concave.point_worst`, `concave.point_mean`}  
-  - Winner:  `concave.point_worst`. 
-- Fourth: {`texture_mean`, `texture_worst`} 
-  - Winner: `texture_mean`
+## Figure 1: Ranked Cross-Correlations
 
-Therefore 10 variables are removed. 
+![](cor_rank_secondeq.png){width=80%}
 
-
-
+Best Representative `radius_se` 
 
 
 ## Remaining Variables
@@ -86,34 +79,33 @@ Therefore 10 variables are removed.
 ## Full Model (Newton-Raphson)
 
 To impliment the Newton-Raphson Method we need the likelihood, gradiant, and hessian matrix:
-
 \[
 \pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,20})  = \frac{e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}
 \]
-
-likelihood function:
+<!--likelihood function:
 \[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
-\]
-
+\] -->
 log-likelihood:
 \[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{20}_{j=1} \beta_jx_{i,j} \right) \right) \right]
 \]
-
-
-
-
-## Full Model (Newton-Raphson)
+<!--
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) + \log( 1 - pi_i)  \right) \right]
+\]-->
 
 The gradient:
 \[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[  \begin{matrix} \sum^n y_i-\pi_i & \sum^n x_{i,1}(y_i-\pi_i) & \dots & \sum^n x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times 21)} 
 \]
+The hessian matrix $(p+1 \times p+1)$
+\[ 
+\nabla^2 l(\mathbf{X}|\vec{\beta}) = - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i)
+\]
 
-The hessian matrix $(21 \times 21)$
+<!--
 \begin{align*}
  \nabla^2 l(\mathbf{X}|\vec{\beta}) &= - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i) \\
  &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
 \end{align*}
-
+-->
 
 
 ## Optimal Model (Logistic LASSO)
@@ -130,10 +122,14 @@ more math
 
 ## Cross Validation Results 
 
-Best $\lambda$ 
+Best $\lambda$ using AUC
+
+## LASSO Coefficients
+
+Best $\lambda$ using beta plot
 
 
-## Coefficient Comparison 
+## Coefficients Comparison 
 
 
 ## AUC 

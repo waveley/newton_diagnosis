@@ -3,7 +3,7 @@ title: |
   | P8160 - Breast Cancer Data:
   | To lasso or to not lasso
 author: |
-  | Group ??
+  | Group 1
   |
   | Amy Pitts, Hun Lee, Jimmy Kelliher,
   | Tucker Morgan, Waveley Qiu
@@ -200,7 +200,6 @@ Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be ne
 \newpage 
 
 # Appendix
-
 
 
 
