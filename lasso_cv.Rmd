@@ -14,7 +14,7 @@ library(glmnet)
 source("./shared_code/setup.R")
 source("./shared_code/partition.R")
 source("./shared_code/data_prep.R")
-source("./shared_code/lasso.R")
+source("./shared_code/logistic_lasso.R")
 source("./shared_code/auc_calc_lasso.R")
 
 part_bc <- partition(p = 0.8, data = bc)
@@ -116,18 +116,49 @@ ex_roc <- pROC::roc(tst_set$diagnosis, ex_pred)
 The cross-validation function seems to work as intended, let's try updating to work with Jimmy's lasso function.
 
 ```{r cv jimmy, warning=FALSE, message=FALSE}
-cv_jt <- function(k = 5, training, func, lambda_vec){
+
+identity <- function(x){
+  return(x)
+}
+
+lambda_init <- function(start, stop, step, func = identity){
+  lambda_vec <- seq(start, stop, step) %>% func()
+  return(lambda_vec)
+}
+
+cv_jt <- function(k = 5, training, func, lambda_list){
   
-  auc_list = list()
-  # mean_auc_list = list()
-  # we have a for loop to iterate over each fold, k = 5 here
+  lam_start <- lambda_list[[1]]
+  lam_stop <- lambda_list[[2]]
+  lam_step <- lambda_list[[3]]
+  lam_func <- lambda_list[[4]]
   
-  pb <- progress_bar$new(
-      format = " folding [:bar] :percent eta: :eta",
-      total = k, clear = FALSE, width = 60)
+  lam_list <- tibble(
+    lam_count = 0,
+    lam_start = 0,
+    lam_stop = 0,
+    lam_step = 0
+  )
   
+  lam_count <- 0
+  del_too_many_var <- 1
+  out_res <- list()
+ 
+ while (del_too_many_var > 0) {
+  
+ lam_count <- lam_count + 1
+ 
+  # saving lambda vector parameters
+ cur_lam_list <- tibble(lam_count, lam_start, lam_stop, lam_step)
+     
+ 
+ lam_list <- bind_rows(lam_list, cur_lam_list) 
+ 
+ new_lambda_vec <- lambda_init(lam_start, lam_stop, lam_step, lam_func)
+ lasso_list <- list()
+ auc_list <- list()
+ 
   for (i in 1:k) {
-    
     
     # this will identify the training set as not i
     trn_set = 
@@ -144,47 +175,55 @@ cv_jt <- function(k = 5, training, func, lambda_vec){
     
     # making matrices
     X_trn <- trn_set[,-1]
-   # X_tst <- tst_set[,-1]
     Y_trn <- trn_set$diagnosis
     
+    # lasso_list    
+    lasso_list <- func(inputs = X_trn, output = Y_trn, lambda_vec = new_lambda_vec)
     
+    lasso_lambda <- lasso_list[[1]]
+    lasso_beta <- lasso_list[[2]]
+    lasso_selected <- tibble(selected_num = lasso_list[[3]])
     
-    # fitting our function based on training set
-    trn_fit = func(x = X_trn, y = Y_trn, lambda_vec = lambda_vec)
+    lasso_lam_bet <- cbind(lasso_lambda, lasso_beta) %>% as.matrix()
     
-    # calculating AUC, updates required, add AUC to end of i-th matrix and store
-    # rbind matrices together, group on lambda and take mean AUC from there
+    trn_roc <- auc_calc_lasso(lasso_lam_bet, tst_set)
     
-    trn_roc <- auc_calc_lasso(trn_fit, tst_set)
-    
-    trn_roc <- trn_roc %>% filter(!is.na(lambda))
-    
-    auc_list = bind_rows(auc_list, trn_roc)
-   # auc_list[[i]] = trn_roc
-    
-    pb$tick()
+    auc_list <- bind_rows(auc_list, trn_roc)
+
   }
-  
-  
-   # calculating mean cv auc for each lambda
-   # auc_df = data.frame("auc" = do.call(rbind, auc_list))
-   #  mean_auc = mean(auc_df$auc)
-   # mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
     
-  res <- 
+  auc_res <- 
     auc_list %>% 
     group_by(lambda) %>%
     summarise(mean_auc = mean(auc_vals))
+   
+  res <- bind_cols(auc_res, lasso_selected)
+  
+  res <- res %>% 
+    mutate(num_dropped_vars = selected_num - lag(selected_num, 1))
+  
+  del_too_many_var <- sum(na.omit(res$num_dropped_vars) > 1)
+  
+    if (del_too_many_var > 0) {
+      max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda)
+      lam_start <- max_auc_lam + 2*abs(lam_step)
+      lam_stop <- max_auc_lam - 2*abs(lam_step)
+      lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(lambda_vec)
+    }  
+ }
   
   # creating dataframe to show lambda values and corresponding mean AUC
-  # res = as.data.frame(do.call(rbind, mean_auc_list))
-  
-  return(res)
+  out_res[[1]] <- res
+  out_res[[2]] <- lam_list
+ 
+  return(out_res)
 }
 
-lambda_vec <- rep(seq(10, 2, -1), 4) / c(rep(1, 9), rep(10, 9), rep(100, 9), rep(1000, 9))
+# test lambda list
+lambda_list <- list(0.4, 0.20, -0.01, identity)
+cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = logistic_lasso, lambda_list = lambda_list)
 
-cv_res <- cv_jt(k = 5, training = bc_trn_folds, func = lasso, lambda_vec = lambda_vec)
-cv_res %>% knitr::kable()
+cv_res[[1]]
+cv_res[[2]]
 ```
 

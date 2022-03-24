@@ -140,5 +140,4 @@ logistic_lasso <- function(
 
   # output results
   list(lambda = lambda_vec, beta = beta_df, selected = selected_vec)
-
 }
