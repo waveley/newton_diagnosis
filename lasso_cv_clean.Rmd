@@ -5,18 +5,20 @@ date: "3/20/2022"
 output: pdf_document
 ---
 
-```{r setup, message = FALSE}
-library(tidyverse)
-library(glmnet)
+```{r setup, warning=FALSE, message = FALSE}
+source("./shared_code/setup.R")
 ```
 
-```{r data import and partition, message = FALSE}
-source("./shared_code/setup.R")
-#source("./shared_code/partition.R")
+```{r data import and partition, warning=FALSE, message = FALSE}
 source("./shared_code/data_prep.R")
+```
+
+```{r external-functions, warning=FALSE, message=FALSE}
 source("./shared_code/logistic_lasso.R")
 source("./shared_code/auc_calc_lasso.R")
 ```
+
+## Folding Data
 
 ```{r folding training data}
 source("./shared_code/cv_folding.R")
@@ -26,84 +28,9 @@ bc_trn_folds <-
   select(-fold_p)
 ```
 
-```{r cv glmnet implementation, message = FALSE, warning = FALSE, eval=FALSE}
-set.seed(100)
+## Helper Functions
 
-X <- bc_trn_folds[, -c(1,32)]
-X <- as.matrix(X)
-Y <- bc_trn_folds$diagnosis
-lambda_vec <- seq(0, 0.4, length = 5) # lambda vector for testing
-
-# creating a simple example function for testing
-ex_func <- function(x, y, lambda_vec){
-  glmnet(x = x, y = y,
-         standardize = TRUE,
-         alpha = 1,
-         lambda = lambda_vec,
-         family = "binomial"(link = "logit"))
-}
-
-ex_fit <- ex_func(x = X, y = Y, lambda_vec = 0) #%>% coef() # just for example, not stored
-
-cv_function <- function(k = 5, training, func, lambda_vec){
-  
-  auc_list = list()
-  mean_auc_list = list()
-# first, a for loop to iterate over a lambda vector
-  for (j in 1:length(lambda_vec)){
-    # and now we have a for loop to iterate over each fold, k = 5 here
-    for (i in 1:k){
-      # this will identify the training set as not i
-      trn_set = 
-        training %>% 
-        filter(fold_id != i) %>% 
-        select(-fold_id)
-      # and this assigns i to be the test set
-      tst_set =
-        training %>% 
-        filter(fold_id == i) %>% 
-        select(-fold_id)
-      # making matrices
-      X_trn <- as.matrix(trn_set[,-1])
-      X_tst <- as.matrix(tst_set[,-1])
-      Y_trn <- trn_set$diagnosis
-      # fitting our function based on training set
-      trn_fit = func(x = X_trn, y = Y_trn, lambda_vec = lambda_vec[j])
-      # calculating AUC
-      trn_pred <- predict(trn_fit,
-                          newx = X_tst,
-                          type = "response")
-      trn_roc <- pROC::roc(tst_set$diagnosis, trn_pred)
-      
-      auc_list[[i]] = trn_roc$auc
-    }
-    # calculating mean cv auc for each lambda
-    auc_df = data.frame("auc" = do.call(rbind, auc_list))
-    mean_auc = mean(auc_df$auc)
-    mean_auc_list[[j]] = data.frame("mean_auc" = mean_auc, "lambda" = lambda_vec[j])
-  }
-  # creating dataframe to show lambda values and corresponding mean AUC
-  res = as.data.frame(do.call(rbind, mean_auc_list))
-  
-  return(res)
-}
-
-cv_function(training = bc_trn_folds, func = ex_func, lambda_vec = lambda_vec)
-```
-
-```{r glmnet example, include = FALSE, eval=FALSE}
-X_tst <- as.matrix(bc_tst[,-1])
-
-ex_pred <- predict(ex_fit,
-                   newx = X_tst,
-                   type = "response")
-
-ex_roc <- pROC::roc(tst_set$diagnosis, ex_pred)
-```
-
-The cross-validation function seems to work as intended, let's try updating to work with Jimmy's lasso function.
-
-```{r cv jimmy, warning=FALSE, message=FALSE}
+```{r helper-functions, warning=FALSE, message=FALSE}
 
 identity <- function(x){
   return(x)
@@ -113,6 +40,41 @@ lambda_init <- function(start, stop, step, func = identity){
   lambda_vec <- func(seq(start, stop, step))
   return(lambda_vec)
 }
+```
+
+## Cross Validation Function
+
+```{r cv, warning=FALSE, message=FALSE}
+
+#################
+#
+# This function takes in the following parameters:
+# > k: number of folds
+# > training: training dataset, first column is outcome, remaining columns are predictors.
+# > lambda_list: list containing the following:
+#     - lambda_start: starting value of lambda vector, without lam_start_stop_func applied
+#     - lambda_stop: stopping value of lambda vector, without lam_start_stop_func applied
+#     - lambda_step: step size between numbers in linear sequence
+#     - lambda_func: transformation of initial sequence of numbers
+#     - lambda_start_stop_func: function applied to lambda_start/lambda_stop
+#
+#
+# This function returns a list with two elements:
+# > A matrix containing the results of the last CV:
+#     - lambda: a column of lambdas
+#     - mean_auc: mean AuC
+#     - selected_vars: number of selected variables column (excluding intercept)
+#     - num_dropped_Vars: number of variables deleted from previous lambda
+# > A matrix containing the lambda vectors that were attempted.
+#     - lambda_count: id of lambda vector/iteration number
+#     - lambda_start: starting value of lambda vector, *without* the lam_start_stop_func
+#       applied (i.e., in linear/untransformed units)
+#     - lambda_stop: stopping value of lambda vector, *without* the lam_start_stop_func 
+#       applied (i.e., in linear/untransformed units)
+#     - lambda_step: step size between lambdas
+#       if lambda_start > lambda_stop, this should be negative.
+#
+#################
 
 cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
   

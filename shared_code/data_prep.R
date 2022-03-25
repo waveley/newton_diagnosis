@@ -6,8 +6,11 @@
 # > converts diagnosis to binary,
 # > deselects id
 # > cuts out some predictors that are correlated with others
+# > creates training and test datasets
 #
 ################
+
+source("./shared_code/partition.R")
 
 bc <- 
   read_csv("./data/breast-cancer.csv") %>% 
@@ -31,9 +34,19 @@ bad <- c(
 )
 
 
-bc <- remove_bad_vars(bc, bad)
+bc_trunc <- remove_bad_vars(bc, bad)
 
+part_bc <- partition(p = 0.8, data = bc_trunc)
 
+bc_trn <- 
+  part_bc %>% 
+  filter(part_id == "train") %>% 
+  select(-part_id)
+
+bc_tst <- 
+  part_bc %>% 
+  filter(part_id == "test") %>% 
+  select(-part_id)
 
 
 

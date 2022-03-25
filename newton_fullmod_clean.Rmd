@@ -22,7 +22,7 @@ library(glmnet)
 Let's import and take a look at the data.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+source("shared_code/data_prep.R")
 ```
 
 Let's take a look at the distributions of other variables.
@@ -41,7 +41,7 @@ tbl_summary(bc, by = diagnosis)
 
 We want our outcome variable to be binary. Let's create a new outcome variable, `y`, which will be 1 if `diagnosis == 'M'` and 0 if `diagnosis == 'B'.
 
-```{r}
+```{r, eval=FALSE}
 bc <- bc %>% mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% relocate(y)
 ```
 
@@ -50,7 +50,7 @@ bc <- bc %>% mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% relocate(y)
 Let's look at the correlations for all predictors.
 
 ```{r, fig.width = 20, fig.asp=0.8}
-cor_cov_all <- cor(bc %>% select(-c(id, y, diagnosis)))
+cor_cov_all <- cor(bc %>% select(-c(diagnosis)))
 
 corrplot::corrplot(cor_cov_all, 
                    method = "color",
@@ -59,12 +59,12 @@ corrplot::corrplot(cor_cov_all,
                    diag = FALSE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 corr_cross(bc_corr, # name of dataset
   top = 25 # display top 10 couples of variables (by correlation coefficient)
 )  +
   geom_text(aes(label =  round(corr,3)), hjust = 1.3) +
-  labs(title= "Figure 2: Ranked Cross-Correlations")
+  labs(title = "Figure 2: Ranked Cross-Correlations")
 ```
 
 
@@ -72,7 +72,7 @@ Yikes. Let's make some cuts ($r^2 > 0.9$) and reevaluate. To begin, we zoom in o
 
 ```{r}
 # call correlation matrix
-corr_df <- cor(bc %>% select(-c(id, y, diagnosis)))
+corr_df <- cor(bc %>% select(-c(diagnosis)))
 
 # convert matrix to tidy data frame and restrict to highly correlated pairs
 corr_df <-
@@ -139,10 +139,12 @@ bad_vars <- c(
   , "texture_worst"
 )
 
-covariates <-
-  bc %>% 
-  select(-c(id, y, diagnosis)) %>%
-  select(-bad_vars)
+# covariates <-
+#  bc %>% 
+#  select(-c(diagnosis)) %>%
+#  select(-bad_vars)
+
+covariates <- bc_trunc
 
 cor_cov <- cor(covariates)
 
@@ -218,13 +220,13 @@ Let's create a function that produces the log-likelihood, gradient vector, and h
 ```{r, warning=FALSE, messsage=FALSE}
 loglike_func <- function(dat, betavec){
   
-  dat = bc_train
+  dat = bc_trn
   
   # x matrix
   dat_temp <-
     dat %>%
     mutate(intercept = 1) %>%
-    select(-y) %>%
+    select(-diagnosis) %>%
     relocate(intercept)
   
   dat_x <-  
@@ -237,10 +239,10 @@ loglike_func <- function(dat, betavec){
   pi <- exp(u) / (1 + exp(u))
   
   # loglikelihood
-  loglik <- sum(dat$y*u - log(1 + exp(u)))
+  loglik <- sum(dat[,1]*u - log(1 + exp(u)))
   
   #gradient 
-  grad <- t(dat_x) %*% (dat$y - pi)
+  grad <- t(dat_x) %*% (dat[,1] - pi)
   
   # Hessian 
   W <- diag(nrow(pi))
@@ -304,14 +306,14 @@ NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
 
 Using a function from `partition.R`, we will split our data into testing and training. We will include only the variables we have identified as being sufficiently uncorrelated.
 
-```{r}
+```{r, eval=FALSE}
 col.num <- which(colnames(bc) %in% fin_names) # get those variables 
 bc_trunc <- bc[, c(1, col.num)]
 
 bc_test_train <- partition(0.8, bc_trunc)
 
-bc_test <- bc_test_train %>% filter(part_id == "test") %>% select(-part_id)
-bc_train <- bc_test_train %>% filter(part_id == "train") %>% select(-part_id)
+bc_tst <- bc_test_train %>% filter(part_id == "test") %>% select(-part_id)
+bc_trn <- bc_test_train %>% filter(part_id == "train") %>% select(-part_id)
 ```
 
 ## Running Newton-Raphson Algorithm
@@ -319,8 +321,8 @@ bc_train <- bc_test_train %>% filter(part_id == "train") %>% select(-part_id)
 Let's establish a beta vector and run the Newton-Raphson algorithm we've established on the training data.
 
 ```{r}
-betavec <- c(rep(0.01, ncol(bc_train))) %>% as.matrix()
-nr1 <- NewtonRaphson(bc_train, betavec)
+betavec <- c(rep(0.01, ncol(bc_trn))) %>% as.matrix()
+nr1 <- NewtonRaphson(bc_trn, betavec)
 beta_est <- nr1[nrow(nr1), -c(1:3)] %>% as.vector()
 ```
 
@@ -329,7 +331,7 @@ beta_est <- nr1[nrow(nr1), -c(1:3)] %>% as.vector()
 Let's run GLM.
 
 ```{r}
-glm_fit <- glm(y~., data = bc_train, family = "binomial")
+glm_fit <- glm(diagnosis~., data = bc_trn, family = "binomial")
 result_glm <- summary(glm_fit)
 
 glm_est <- glm_fit %>% 
@@ -343,8 +345,8 @@ glm_est <- glm_fit %>%
 Now, let's run GLMNET.
 
 ```{r}
-xdat <- bc_train %>% select(-y) %>% as.matrix()
-glmnet_fit <- glmnet(x = xdat, y = bc_train$y, family = "binomial", lambda = 0, thresh = 10^-12)
+xdat <- bc_trn %>% select(-diagnosis) %>% as.matrix()
+glmnet_fit <- glmnet(x = xdat, y = bc_trn$diagnosis, family = "binomial", lambda = 0, thresh = 10^-12)
 glmnet_est <- coef(glmnet_fit) %>% as.vector() %>% round(3)
 ```
 
@@ -380,14 +382,14 @@ auc_calc_full <- function(beta_est, test_data){
   pred <- as.matrix(xvals) %*% beta_est # get the cross product of the linear model
   logit_pred <- exp(pred) / (1 + exp(pred)) # link function to get probabilities
   
-  auc_val <- auc(test_data$y, as.vector(logit_pred)) # calculating the AUC
+  auc_val <- auc(test_data[,1], as.vector(logit_pred)) # calculating the AUC
   
   # roc(tst_data$y, as.vector(logit_pred)) %>% plot( legacy.axes=TRUE) # graphs AUC
   return(auc_val)
 
 }
 
-auc <- auc_calc_full(beta_est, bc_test)
+auc <- auc_calc_full(beta_est, bc_tst)
 
 ```
 
@@ -486,7 +488,7 @@ sigmoid_plot <- function(result_df, training_data, glm_fit){
   nr1 <- data.frame(nr1)
   nr1 <- nr1[-1,] %>% select(-i, -loglik, -step)
   
-  X <- as.matrix(bc_train)
+  X <- as.matrix(bc_trn)
   v1 <- unlist(nr1[1,], use.name = FALSE) %>% as.matrix()
   log_odd <- X %*% v1
   Probability <- 1/(1+exp(-log_odd))
@@ -495,7 +497,7 @@ sigmoid_plot <- function(result_df, training_data, glm_fit){
        xlab = "Log[p(1-p)]", 
        main = "Sigmoid function of Newton Rapshon Logistic Fit over Iteration" )
   
-  X <- as.matrix(bc_train)
+  X <- as.matrix(bc_trn)
   z <- list()
   p <- list()
   
@@ -527,7 +529,7 @@ sigmoid_plot <- function(result_df, training_data, glm_fit){
     
 }
 
-sigmoid_plot(nr1, bc_train, glm_fit)
+sigmoid_plot(nr1, bc_trn, glm_fit)
 ```
 
 
