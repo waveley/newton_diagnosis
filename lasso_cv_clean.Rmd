@@ -6,6 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, warning=FALSE, message = FALSE}
+set.seed(100)
 source("./shared_code/setup.R")
 ```
 
@@ -205,7 +206,7 @@ cv_res[[2]] %>% knitr::kable()
 
 ```{r}
 # selected lambda: 0.05118004
-selected_lambda <- cv_res[[1]] %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda)
+selected_lambda <- cv_res[[1]] %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda) %>% mean()
 lasso_final_model <- logistic_lasso(inputs = bc_trn[,-1], output = bc_trn[,1], lambda_vec = selected_lambda)
 save(lasso_final_model, file = "lasso_results_wq.Rdata")
 lasso_betas <- lasso_final_model[[2]] %>% t()
