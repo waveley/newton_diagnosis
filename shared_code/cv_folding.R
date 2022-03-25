@@ -2,6 +2,7 @@
 # this function should be used on training data
 
 cv_sets <- function(k = 5, training){
+  set.seed(100)
   # again generating a probability value
   fold_p = runif(nrow(training), min = 0, max = 1)
   
