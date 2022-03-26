@@ -122,6 +122,7 @@ ggroc(list(roc_lasso, roc_nr), legacy.axes = TRUE) +
   labs(title = "ROC Curves from Test Data Predictions")
 
 ## another option for plotting ROC curves
+
 plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
      main = "ROC Curves from Test Data Predictions")
 plot(roc_nr, col = "dodgerblue", add = TRUE)
