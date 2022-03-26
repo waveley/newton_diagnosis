@@ -10,11 +10,14 @@ library(progress)
 library(beepr)
 library(gtsummary)
 library(matrixcalc)
+library(pROC)
 
 
 # set knitr defaults
 knitr::opts_chunk$set(
-  echo      = TRUE
+  warning = FALSE
+  , message = FALSE
+  , echo      = TRUE
   , fig.align = "center"
   , fig.width = 6
   , fig.asp   = .6
