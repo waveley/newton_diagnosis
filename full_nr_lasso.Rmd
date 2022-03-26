@@ -143,3 +143,4 @@ cbind(nr_beta_est, lasso_betas) %>%
   knitr::kable(caption = "Final Beta Coefficient Estimates")
 ```
 
+## Comparison to GLMNET Lasso
