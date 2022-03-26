@@ -78,24 +78,23 @@ Best Representative `radius_se`
 
 ## Full Model (Newton-Raphson)
 
-To impliment the Newton-Raphson Method we need the likelihood, gradiant, and hessian matrix:
+To impliment the Newton-Raphson Method we need the likelihood, gradiant, and hessian matrix. Let
 \[
-\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,20})  = \frac{e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}
+\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,p})  = \frac{e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}.
 \]
 <!--likelihood function:
 \[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
 \] -->
-log-likelihood:
-\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{20}_{j=1} \beta_jx_{i,j} \right) \right) \right]
+**The log-likelihood:**
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{p}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{p}_{j=1} \beta_jx_{i,j} \right) \right) \right]
 \]
 <!--
 \[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) + \log( 1 - pi_i)  \right) \right]
 \]-->
-
-The gradient:
-\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[  \begin{matrix} \sum^n y_i-\pi_i & \sum^n x_{i,1}(y_i-\pi_i) & \dots & \sum^n x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times 21)} 
+**The gradient:**
+\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[  \begin{matrix} \sum^n y_i-\pi_i & \sum^n x_{i,1}(y_i-\pi_i) & \dots & \sum^n x_{i,p} (y_i-\pi_i) \end{matrix}\right]^{T}_{1 \times (p+1)} 
 \]
-The hessian matrix $(p+1 \times p+1)$
+**The hessian:** produces a matrix $(p+1 \times p+1)$
 \[ 
 \nabla^2 l(\mathbf{X}|\vec{\beta}) = - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i)
 \]
