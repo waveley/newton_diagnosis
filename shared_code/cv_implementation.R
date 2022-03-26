@@ -54,6 +54,7 @@ cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
   lam_count <- 0
   del_too_many_var <- 1
   out_res <- list()
+  res <- list()
   
   while (del_too_many_var > 0) {
     # print("working")
@@ -118,9 +119,9 @@ cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
       group_by(lambda) %>%
       summarise(mean_auc = mean(auc_vals))
     
-    res <- bind_cols(auc_res, lasso_selected)
+    res[[lam_count]] <- bind_cols(auc_res, lasso_selected)
     
-    res <- res %>% 
+    res[[lam_count]] <- res[[lam_count]] %>% 
       mutate(num_dropped_vars = selected_num - lag(selected_num, 1))
     
     del_too_many_var <- sum(na.omit(res$num_dropped_vars) > 1)

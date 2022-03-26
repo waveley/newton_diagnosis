@@ -54,7 +54,7 @@ cv_res <- cv_jt(k = 5, training = bc_trn_folds,
 ```{r lasso results}
 # pulling out key results
 selected_lambda <- 
-  cv_res[[1]] %>% 
+  cv_res[[1]][[length(cv_res[[1]])]] %>% 
   filter(mean_auc == max(mean_auc)) %>% 
   pull(lambda) %>% 
   mean()
@@ -81,6 +81,10 @@ lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>%
 
 # storing lasso ROC object
 roc_lasso <- roc_func(lasso_betas, bc_tst)
+
+cv_res_lam <- cv_res[[1]]
+
+
 ```
 
 ```{r plotting some results}
@@ -98,11 +102,14 @@ lfr_df %>%
 
 # this looks alright, might prefer a larger lambda range to show AUC down to 0.5
 # but probably not important
-cv_res[1] %>% 
+cv_res[[1]][[1]] %>% 
   data.frame() %>% 
   ggplot(x = lambda, y = mean_auc) +
   geom_line(aes(x = lambda, y = mean_auc), col = "dodgerblue") +
-  geom_vline(xintercept = selected_lambda)
+  geom_vline(xintercept = selected_lambda, linetype = "dashed", col = "red") +
+  labs(title = "Mean AUC vs. Lambda",
+       x = "Lambda",
+       y = "Mean AUC")
 
 
 # Final ROC plots
