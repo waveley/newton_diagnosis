@@ -41,17 +41,6 @@ bc_trn_folds <-
   select(-fold_p)
 ```
 
-```{r helper-functions, warning=FALSE, message=FALSE}
-identity <- function(x){
-  return(x)
-}
-
-lambda_init <- function(start, stop, step, func = identity){
-  lambda_vec <- func(seq(start, stop, step))
-  return(lambda_vec)
-}
-```
-
 ```{r implementing cv}
 source("./shared_code/cv_implementation.R")
 lambda_max <- max(t(scale(as.matrix(bc_trn[,-1]))) %*% bc_trn[,1]) / nrow(bc_trn[,-1])

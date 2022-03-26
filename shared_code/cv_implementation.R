@@ -28,6 +28,15 @@
 #
 #################
 
+identity <- function(x){
+  return(x)
+}
+
+lambda_init <- function(start, stop, step, func = identity){
+  lambda_vec <- func(seq(start, stop, step))
+  return(lambda_vec)
+}
+
 cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
   
   lam_start <- lambda_list[[1]]
