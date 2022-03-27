@@ -11,6 +11,7 @@ library(beepr)
 library(gtsummary)
 library(matrixcalc)
 library(pROC)
+library(glmnet)
 
 
 # set knitr defaults

@@ -144,3 +144,44 @@ cbind(nr_beta_est, lasso_betas) %>%
 ```
 
 ## Comparison to GLMNET Lasso
+
+```{r}
+# standardize bc_trn[,-1]
+bc_cov <- as.matrix(scale(bc_trn[,-1]))
+
+glmnet_fit <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda)
+glmnet_est <- as.vector(coef(glmnet_fit))
+
+comp_est <- tibble(
+  names = lasso_betas %>% rownames(),
+  glmnet_est = glmnet_est,
+  lasso_est = lasso_betas,
+  diff = glmnet_est - lasso_est
+)
+comp_est %>% knitr::kable()
+```
+
+The GLMNET lasso regression procedure and our logistic lasso procedure produce very similar (near identical) results. Yay!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
