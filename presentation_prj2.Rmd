@@ -67,7 +67,7 @@ Best Representative `radius_worst`
 Best Representative `radius_se` 
 
 
-## Remaining Variables
+## Table 1: Remaining Variables
 
 ![Table 1](table1.png){width=45%}
 
@@ -116,8 +116,8 @@ also going to be some math
 
 more math 
 
-## 5-fold Cross Validation 
-
+## Figure 2: 5-fold Cross Validation 
+![](cv_vis.png){width=105%}
 
 ## Cross Validation Results 
 
