@@ -160,7 +160,13 @@ Best $\lambda$ using beta plot
 
 ## Discussion 
 
-
+- Goal is accurately classify every patient
+- Balancing Sensitivity vs. Specificity. 
+  - In first screening cases want to catch every case. Maximize Sensitivity.  
+  
+  
+  
+  
 
 ## Resources 
 
