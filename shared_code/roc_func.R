@@ -15,7 +15,6 @@ roc_func <- function(beta_est, test_data){
   # terms <- beta_est %>% pull(term) 
   # col.num <- which(colnames(test_data) %in% terms)
   # select the desired x values 
-  test_data = bc_tst
   xvals <- test_data[,-1] %>% 
     mutate(
       intercept = 1 # create a intercept variable 

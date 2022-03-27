@@ -1,0 +1,253 @@
+---
+title: "DUPLICATE: Full NR and LASSO Run (with stadardized data)"
+author: "Jimmy Kelliher"
+date: "3/27/2022"
+output: pdf_document
+---
+
+This file prepares our data, runs Newton-Raphson, runs LASSO, and plots some results at the bottom. I think this file should stay clean and relatively simple. I think the file should only take 15ish minutes to knit or run in full. I think the best idea is for plots to be saved as R objects and imported into the presentation / report, but open to ideas here.
+
+```{r setup, warning=FALSE, message = FALSE}
+source("./shared_code/setup.R")
+knitr::opts_chunk$set(cache = FALSE)
+```
+
+```{r data import and partition, warning=FALSE, message = FALSE}
+source("./shared_code/data_prep.R")
+```
+
+# Newton-Raphson
+
+```{r newton-raphson function}
+source("./shared_code/full_NR2.R")
+source("./shared_code/roc_func.R")
+roc_nr <- roc_func(nr_beta_est, bc_tst)
+roc_nr_1 <- roc_func(nr_beta_est, bc_tst)
+roc_nr_2 <- roc_func(nr_beta_est, bc_tst)
+```
+
+# LASSO
+
+```{r external-functions, warning=FALSE, message=FALSE}
+source("./shared_code/logistic_lasso.R")
+source("./shared_code/auc_calc_lasso.R")
+```
+
+## Folding Data
+
+```{r folding training data}
+source("./shared_code/cv_folding.R")
+
+bc_trn_folds <- 
+  cv_sets(training = bc_trn) %>% 
+  select(-fold_p)
+```
+
+```{r implementing cv}
+source("./shared_code/cv_implementation.R")
+lambda_max <- max(t(scale(as.matrix(bc_trn[,-1]))) %*% bc_trn[,1]) / nrow(bc_trn[,-1])
+lambda_list <- list(log(lambda_max), log(0.0001), -(log(lambda_max) - log(0.0001))/100, exp)
+```
+
+```{r lasso results}
+# load data from final run
+load("finalized_lasso_data.RData")
+
+# pulling out key results
+selected_lambda <- 
+  cv_res[[1]][[length(cv_res[[1]])]] %>% 
+  filter(mean_auc == max(mean_auc)) %>% 
+  pull(lambda) %>% 
+  min()
+
+selected_lambda_minmax <- 
+  cv_res[[3]] %>%
+  group_by(lambda) %>%
+  summarize(min_auc = min(auc_vals)) %>%
+  ungroup() %>%
+  filter(min_auc == max(min_auc)) %>%
+  pull(lambda) %>%
+  as.vector()
+  
+
+get_betas <- function(lambda){
+
+lasso_final_model <- logistic_lasso(inputs = bc_trn[,-1], 
+                                    output = bc_trn[,1], 
+                                    lambda_vec = lambda)
+lasso_betas <- lasso_final_model[[2]] %>% t()
+return(lasso_betas)
+}
+
+lasso_betas <- get_betas(selected_lambda)
+lasso_betas_minimax <- get_betas(selected_lambda_minmax)
+
+# this is just for viz purposes
+tst_lambda_vec <- exp(seq(from = log(lambda_max), 
+                          to = log(0.0001), 
+                          by = -(log(lambda_max) - log(0.0001))/100))
+
+#lasso_final_range <- logistic_lasso(inputs = bc_trn[,-1], 
+#                                    output = bc_trn[,1], 
+#                                    lambda_vec = tst_lambda_vec)
+
+lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>% 
+  select(-selected) %>% 
+  pivot_longer(cols = starts_with("beta"),
+               names_prefix = "beta.",
+               names_to = "beta_coef",
+               values_to = "coef_est")
+
+# storing lasso ROC object
+#bc_tst[,-1] <- scale(bc_tst[,-1])
+roc_lasso <- roc_func(lasso_betas, bc_tst)
+
+cv_res_lam <- cv_res[[1]]
+```
+
+
+## Table NR, Mean Lambda, Minimax Lambda
+```{r}
+
+beta_ests <- tibble(
+  names = lasso_betas %>% rownames(),
+  nr = nr_beta_est,
+  mean_lambda = lasso_betas[,1],
+  minimax_lambda = lasso_betas_minimax[,1]
+  )
+
+get_specificities <- function(betas){
+  roc <- roc_func(betas, bc_tst)
+  spec <- roc$specificities[max(which(roc$sensitivities == 1))]
+  auc <- roc$auc[1]
+  out_list <- list(spec, auc)
+  return(out_list)
+}
+
+test <- get_specificities(nr_beta_est)
+nr_spec_auc <- get_specificities(nr_beta_est)
+#roc_nr <- roc_func(nr_beta_est, bc_tst)
+
+roc_nr$specificities[which(roc_nr$sensitivities == 1)]
+
+spec <- tibble(
+  names = "Specificities",
+  nr = get_specificities(nr_beta_est)[[1]],
+  mean_lambda = get_specificities(lasso_betas[,1])[[1]],
+  minimax_lambda = get_specificities(lasso_betas_minimax[,1])[[1]]
+)
+
+auc <- tibble(
+  names = "AUC", 
+  nr = get_specificities(nr_beta_est)[[2]],
+  mean_lambda = get_specificities(lasso_betas[,1])[[2]],
+  minimax_lambda = get_specificities(lasso_betas_minimax[,1])[[2]]
+)
+
+fin_tab <-
+  bind_rows(
+    beta_ests, spec, auc
+  )
+
+fin_tab %>% knitr::kable()
+```
+
+
+```{r plotting_some_results}
+# each of these plots could be saved as R objects and imported into other documents
+lfr_df %>% 
+  group_by(lambda) %>% 
+  filter(beta_coef != "intercept") %>% 
+  ggplot(x = lambda, y = coef_est, group = beta_coef) +
+  geom_path(aes(x = lambda, y = coef_est, group = beta_coef, col = beta_coef)) +
+  coord_cartesian(xlim = c(0, 0.05)) + # this zooms in on the plot, comment out if flipping
+#  scale_x_reverse() +                  # this flips the x-axis if wanted
+#  coord_cartesian(xlim = c(0.06, 0)) + # this zooms in if flipped
+  geom_vline(xintercept = selected_lambda) + 
+  labs(title = "Beta Coefficients in LASSO Model") 
+
+# this looks alright, might prefer a larger lambda range to show AUC down to 0.5
+# but probably not important
+cv_res[[1]][[1]] %>% 
+  data.frame() %>% 
+  ggplot(x = lambda, y = mean_auc) +
+  geom_line(aes(x = lambda, y = mean_auc), col = "dodgerblue") +
+  geom_vline(xintercept = selected_lambda, linetype = "dashed", col = "red") +
+  labs(title = "Mean AUC vs. Lambda",
+       x = "Lambda",
+       y = "Mean AUC")
+
+
+# Final ROC plots
+auc_vec <- c(round(roc_lasso$auc[1], digits = 4), round(roc_nr$auc[1], digits = 4))
+model_names <- c("LASSO", "Newton-Raphson")
+ggroc(list(roc_lasso, roc_nr), legacy.axes = TRUE) +
+  scale_color_discrete(labels = paste0(model_names, " (", auc_vec, ")"),
+                       name = "Models (AUC)") +
+  geom_abline(intercept = 0, slope = 1, color = "grey") +
+  labs(title = "ROC Curves from Test Data Predictions")
+
+## another option for plotting ROC curves
+
+plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
+     main = "ROC Curves from Test Data Predictions")
+plot(roc_nr, col = "dodgerblue", add = TRUE)
+legend("bottomright", legend = paste0(model_names, ": ", auc_vec), 
+       col = c("goldenrod", "dodgerblue"), lwd = 2)
+```
+
+```{r tabling_some_results}
+beta_names <- 
+  (dimnames(lasso_betas)[1]) %>% 
+  data.frame() %>% 
+  rename(beta_coef = 1)
+
+cbind(nr_beta_est, lasso_betas) %>% 
+  data.frame() %>% 
+  round(digits = 4) %>% 
+  rename(NewtonRaphson = 1, LASSO = 2) %>% 
+  knitr::kable(caption = "Final Beta Coefficient Estimates")
+```
+
+## Comparison to GLMNET Lasso
+
+```{r}
+# standardize bc_trn[,-1]
+bc_cov <- as.matrix(scale(bc_trn[,-1]))
+
+glmnet_fit <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda)
+glmnet_est <- as.vector(coef(glmnet_fit))
+
+comp_est <- tibble(
+  names = lasso_betas %>% rownames(),
+  glmnet_est = glmnet_est,
+  lasso_est = lasso_betas,
+  diff = glmnet_est - lasso_est
+)
+comp_est %>% knitr::kable()
+```
+
+The GLMNET lasso regression procedure and our logistic lasso procedure produce very similar (near identical) results. Yay!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
