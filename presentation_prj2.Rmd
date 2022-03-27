@@ -144,7 +144,8 @@ __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
 ![](images/cv_vis.png){width=105%}
 
 ## Cross Validation Results 
-![](images/mean_auc_v_lambda.png)
+
+Best $\lambda$ using AUC plot
 
 ## LASSO Coefficients
 
