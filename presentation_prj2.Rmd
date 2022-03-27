@@ -13,6 +13,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lares) # for the correlation plot 
+library(gtsummary)
+
+## loading in the full dataset. 
+bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 ```
 
 ## Motivation
@@ -49,6 +55,31 @@ Methods:
   - 357 benign (B) cases and 212 malignant (M) cases
 - The Covariates include information such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
 
+## Figure 1: Correlation Heat Plot of all Covariates
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8}
+bc_corr <- bc %>% 
+  mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
+  relocate(y)  %>% 
+  select(-c(id, y, diagnosis))
+
+cor_cov_all <- cor(bc_corr)
+
+bad <- c(
+  "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
+  , "perimeter_se", "area_se"
+  , "concave points_worst", "concavity_mean"
+  , "texture_worst"
+)
+
+#title = "Figure 1: Correlation Heat Plot of all Covariates"
+corrplot::corrplot(cor_cov_all, 
+                   method = "color",
+                   type = "lower", 
+                   insig = "blank",
+                   diag = FALSE,
+                  # title=title,
+                   mar=c(0,0,10,0)) 
+```
 
 ## Figure 1: Ranked Cross-Correlations
 

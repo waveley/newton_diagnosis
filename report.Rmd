@@ -165,9 +165,45 @@ Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be ne
 
 ## 2.3 Logistic LASSO Algorithm 
 
+__Lemma 1.__ Consider the optimization problem
+  \[ \min_{x \in \mathbb{R}}  \left\{ \frac{1}{2}(x - b)^2 + c|x| \right\} \]
+for $b \in\mathbb{R}$ and $c \in \mathbb{R}_{++}$. It follows that the minimizer is given by
+  \[ \hat{x} = S(b, c), \]
+where $S$ is the soft-thresholding operator.
+
+__Lemma 2.__ Consider the optimization problem
+  \[ \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 \right\} \]
+for some $k \in \{ 1, \ldots, p \}$. It follows that the minimizer is given by
+  \[ \hat{\beta}_k = \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right). \]
+
+__Lemma 3.__ With $\hat{\beta}_k$ defined as above,
+\begin{align*}
+\min_{\beta_k \in \mathbb{R}}& \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
+  &= \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2}(\beta_k - \hat{\beta}_k)^2 + \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda |\beta_k| \right\}.
+\end{align*}
+
+__Proposition.__ By Lemma 1 and Lemma 3,
+\begin{align*}
+ \underset{\beta_k \in \mathbb{R}}{\arg \min} & \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
+  &= S \left(\hat{\beta}_k, \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda \right) 
+ \end{align*} 
+
 
 ## 2.4 5-fold Cross Validation 
 
+To properly implement the logistic LASSO model an optimal $\lambda$ must be selected. First, we need to define our range of possible $\lambda$ values. To start we define the biggest value as $\lambda_{max}$. This is defined as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$. The smallest value in our range is $\lambda_{min} = \lambda_{max}/1000$. This formula was recommended in a paper **Find paper**, however, we found it does not achieve our derived minimum property. Therefore we imperially found $\lambda_{min}$ by starting with the suggested formula and then selecting a value a quite a bit smaller (a fourth of the size). Thus, our range of values we are going to try for $\lambda$ is $(\lambda_{max}, \lambda_{min})$ with step sizes between values on a log scale result is 100 values.  This process will decrement through the $\lambda$ values. 
+
+Our goal is to select an optimal $\lambda$ value. To select the best value we will implement a 5-fold Cross Validation system. In **Figure 3** the first step of the process is to split the data into train and test data as described above. Using just the training data the cross validation procedure will implement a 5 fold process. In each fold the data will be split into 5 chunks. During the first fold the first split of data will be used as a test set while the 4 other splits will be used as the training data. The second fold will use the second split as the test and the rest as train set. This process will continue for each fold.  Each fold will produce an AUC value for each $\lambda$ in our range values. For example, in on Fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for 5 folds each $\lambda$ will have 5 AUC values. 
+
+To select our optimal we will use two processes greatest mean AUC or Minimax AUC 
+
+The greatest mean AUC takes the average AUC value for each 100 $\lambda$ in our range. Then is selects the largest AUC value as the optimal model. 
+
+The Minimax AUC selects the worst AUC value for each 100 $\lambda$ in our range. Then the maximum worst AUC is selected as our optional model. 
+
+The greatest mean AUC and Minimax AUC optimal models will be compared against the full model. 
+
+![Figure 3](cv_vis.png){width=105%}
 
 
 # 3.0 Results 
