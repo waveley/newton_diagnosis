@@ -1,7 +1,7 @@
 ---
-title: "Full NR and LASSO Run"
-author: "Tucker Morgan - tlm2152"
-date: "3/26/2022"
+title: "DUPLICATE: Full NR and LASSO Run (with stadardized data)"
+author: "Jimmy Kelliher"
+date: "3/27/2022"
 output: pdf_document
 ---
 
@@ -46,18 +46,34 @@ source("./shared_code/cv_implementation.R")
 lambda_max <- max(t(scale(as.matrix(bc_trn[,-1]))) %*% bc_trn[,1]) / nrow(bc_trn[,-1])
 lambda_list <- list(log(lambda_max), log(0.0001), -(log(lambda_max) - log(0.0001))/100, exp)
 
-cv_res <- cv_jt(k = 5, training = bc_trn_folds, 
-                func = logistic_lasso, lam_start_stop_func = log, 
-                lambda_list = lambda_list)
+#cv_res <- cv_jt(k = 5, training = bc_trn_folds, 
+#                func = logistic_lasso, lam_start_stop_func = log, 
+#                lambda_list = lambda_list)
+
+# cv.glmnet(x, y, alpha = 1, family = "binomial", type.measure = "auc", lambda = exp(seq(log(lambda_max), log(0.00001), length.out = 1000)), nfolds = 5)
 ```
 
 ```{r lasso results}
+# load data from final run
+load("finalized_lasso_data.RData")
+
 # pulling out key results
 selected_lambda <- 
   cv_res[[1]][[length(cv_res[[1]])]] %>% 
   filter(mean_auc == max(mean_auc)) %>% 
   pull(lambda) %>% 
-  mean()
+  min()
+
+selected_lambda_minmax <- 
+  cv_res[[3]] %>%
+  group_by(lambda) %>%
+  summarize(min_auc = min(auc_vals)) %>%
+  ungroup() %>%
+  filter(min_auc == max(min_auc)) %>%
+  pull(lambda) %>%
+  as.vector()
+  
+
 
 lasso_final_model <- logistic_lasso(inputs = bc_trn[,-1], 
                                     output = bc_trn[,1], 
@@ -68,9 +84,9 @@ tst_lambda_vec <- exp(seq(from = log(lambda_max),
                           to = log(0.0001), 
                           by = -(log(lambda_max) - log(0.0001))/100))
 
-lasso_final_range <- logistic_lasso(inputs = bc_trn[,-1], 
-                                    output = bc_trn[,1], 
-                                    lambda_vec = tst_lambda_vec)
+#lasso_final_range <- logistic_lasso(inputs = bc_trn[,-1], 
+#                                    output = bc_trn[,1], 
+#                                    lambda_vec = tst_lambda_vec)
 
 lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>% 
   select(-selected) %>% 
@@ -80,14 +96,13 @@ lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>%
                values_to = "coef_est")
 
 # storing lasso ROC object
+bc_tst[,-1] <- scale(bc_tst[,-1])
 roc_lasso <- roc_func(lasso_betas, bc_tst)
 
 cv_res_lam <- cv_res[[1]]
-
-save(cv_res, lasso_final_range, file = "finalized_lasso_data.RData")
 ```
 
-```{r plotting some results}
+```{r plotting_some_results}
 # each of these plots could be saved as R objects and imported into other documents
 lfr_df %>% 
   group_by(lambda) %>% 
@@ -130,7 +145,7 @@ legend("bottomright", legend = paste0(model_names, ": ", auc_vec),
        col = c("goldenrod", "dodgerblue"), lwd = 2)
 ```
 
-```{r tabling some results}
+```{r tabling_some_results}
 beta_names <- 
   (dimnames(lasso_betas)[1]) %>% 
   data.frame() %>% 

@@ -17,6 +17,8 @@ bc <-
   mutate(diagnosis = 1 * (diagnosis == "M")) %>% 
   select(-id)
 
+bc[,-1] <- scale(bc[-1])
+
 remove_bad_vars <- function(indat, bad_vars){
   
   outdat <-

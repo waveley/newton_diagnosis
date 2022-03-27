@@ -139,6 +139,7 @@ cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
   # creating dataframe to show lambda values and corresponding mean AUC
   out_res[[1]] <- res
   out_res[[2]] <- lam_list
+  out_res[[3]] <- auc_list
   
   return(out_res)
 }
