@@ -52,24 +52,24 @@ Methods:
 
 ## Figure 1: Ranked Cross-Correlations
 
-![](cor_rank_no_title.png){width=80%}
+![](images/cor_rank_no_title.png){width=80%}
 
 ## Figure 1: Ranked Cross-Correlations
 
-![](cor_rank_firsteq.png){width=80%}
+![](images/cor_rank_firsteq.png){width=80%}
 
 Best Representative `radius_worst` 
 
 ## Figure 1: Ranked Cross-Correlations
 
-![](cor_rank_secondeq.png){width=80%}
+![](images/cor_rank_secondeq.png){width=80%}
 
 Best Representative `radius_se` 
 
 
 ## Table 1: Remaining Variables
 
-![Table 1](table1.png){width=45%}
+![Table 1](images/table1.png){width=45%}
 
 <!--Talk about test and train split -->
 
@@ -141,11 +141,10 @@ __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
  \end{align*} 
 
 ## Figure 2: 5-fold Cross Validation 
-![](cv_vis.png){width=105%}
+![](images/cv_vis.png){width=105%}
 
 ## Cross Validation Results 
-
-Best $\lambda$ using AUC
+![](images/mean_auc_v_lambda.png)
 
 ## LASSO Coefficients
 
