@@ -99,6 +99,7 @@ lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>%
 # storing lasso ROC object
 #bc_tst[,-1] <- scale(bc_tst[,-1])
 roc_lasso <- roc_func(lasso_betas, bc_tst)
+roc_minimax <- roc_func(lasso_betas_minimax, bc_tst)
 
 cv_res_lam <- cv_res[[1]]
 ```
@@ -106,7 +107,6 @@ cv_res_lam <- cv_res[[1]]
 
 ## Table NR, Mean Lambda, Minimax Lambda
 ```{r}
-
 beta_ests <- tibble(
   names = lasso_betas %>% rownames(),
   nr = nr_beta_est,
@@ -147,51 +147,67 @@ fin_tab <-
     beta_ests, spec, auc
   )
 
-fin_tab %>% knitr::kable()
+fin_tab[22:23,] %>% 
+  rename(Measures = 1, NewtonRaphson = 2, LASSO_GreatestMeanAUC = 3, LASSO_MinimaxAUC = 4) %>% 
+  rbind(c("Selected Lambda", 0, selected_lambda, selected_lambda_minmax)) %>% 
+  mutate(NewtonRaphson = round(as.double(NewtonRaphson), digits = 4),
+         LASSO_GreatestMeanAUC = round(as.double(LASSO_GreatestMeanAUC), digits = 4),
+         LASSO_MinimaxAUC = format(round(as.double(LASSO_MinimaxAUC), digits = 4)), scientific = FALSE) %>% 
+  rbind(c("Number of Variables (w/o Intercept)", sum(abs(nr_beta_est) > 0) - 1, sum(abs(lasso_betas) > 0) - 1, sum(abs(lasso_betas_minimax) > 0) - 1)) %>% 
+  select(-scientific) %>% 
+  kableExtra::kbl(caption = "Final Beta Coefficient Estimates") %>% 
+  kableExtra::kable_styling(latex_options = "basic")
 ```
 
 
 ```{r plotting_some_results}
-# each of these plots could be saved as R objects and imported into other documents
-lfr_df %>% 
+beta_coef_plot <- 
+  lfr_df %>% 
   group_by(lambda) %>% 
   filter(beta_coef != "intercept") %>% 
-  ggplot(x = lambda, y = coef_est, group = beta_coef) +
-  geom_path(aes(x = lambda, y = coef_est, group = beta_coef, col = beta_coef)) +
-  coord_cartesian(xlim = c(0, 0.05)) + # this zooms in on the plot, comment out if flipping
-#  scale_x_reverse() +                  # this flips the x-axis if wanted
-#  coord_cartesian(xlim = c(0.06, 0)) + # this zooms in if flipped
-  geom_vline(xintercept = selected_lambda) + 
-  labs(title = "Beta Coefficients in LASSO Model") 
+  ggplot(x = -log(lambda), y = coef_est, group = beta_coef) +
+  geom_path(aes(x = -log(lambda), y = coef_est, group = beta_coef, col = beta_coef)) +
+  geom_vline(xintercept = -log(selected_lambda), col = "black", linetype = "dashed") + 
+  geom_text(aes(x = -log(selected_lambda), y = 5, label = "λ - Greatest Mean AUC"), colour = "black", size = 3, hjust = 1.05) +
+  geom_vline(xintercept = -log(selected_lambda_minmax), col = "black", linetype = "dashed") +
+  geom_text(aes(x = -log(selected_lambda_minmax), y = 5, label = "λ - Minimax AUC"), colour = "black", size = 3, hjust = 1.05) +
+  labs(title = "Beta Coefficients in LASSO Model")
 
 # this looks alright, might prefer a larger lambda range to show AUC down to 0.5
 # but probably not important
-cv_res[[1]][[1]] %>% 
+auc_vs_lambda <- 
+  cv_res[[1]][[1]] %>% 
   data.frame() %>% 
   ggplot(x = lambda, y = mean_auc) +
-  geom_line(aes(x = lambda, y = mean_auc), col = "dodgerblue") +
-  geom_vline(xintercept = selected_lambda, linetype = "dashed", col = "red") +
+  geom_line(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_vline(xintercept = selected_lambda, linetype = "dashed", color = "red") +
+  geom_point(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_text(aes(x = selected_lambda, y = 0.96, label = "λ - Greatest Mean AUC = 0.0101"), col = "red", size = 3, hjust = -0.05) +
+#  coord_cartesian(xlim = c(0, 0.2), ylim = c(.9, 1)) +
   labs(title = "Mean AUC vs. Lambda",
        x = "Lambda",
        y = "Mean AUC")
 
+save(cv_res, nr1, roc_lasso, roc_minmax, roc_nr, beta_coef_plot, betas_table_final, auc_vs_lambda, selected_lambda, selected_lambda_minmax, file = "plotting_data.RData")
 
 # Final ROC plots
-auc_vec <- c(round(roc_lasso$auc[1], digits = 4), round(roc_nr$auc[1], digits = 4))
-model_names <- c("LASSO", "Newton-Raphson")
-ggroc(list(roc_lasso, roc_nr), legacy.axes = TRUE) +
+auc_vec <- c(round(roc_lasso$auc[1], digits = 4),
+             round(roc_minimax$auc[1], digits = 4),
+             round(roc_nr$auc[1], digits = 4))
+model_names <- c("LASSO Greatest Mean AUC", "LASSO MinMax AUC", "Newton-Raphson")
+ggroc(list(roc_lasso, roc_minimax, roc_nr), legacy.axes = TRUE) +
   scale_color_discrete(labels = paste0(model_names, " (", auc_vec, ")"),
                        name = "Models (AUC)") +
   geom_abline(intercept = 0, slope = 1, color = "grey") +
   labs(title = "ROC Curves from Test Data Predictions")
 
 ## another option for plotting ROC curves
-
 plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
      main = "ROC Curves from Test Data Predictions")
+plot(roc_minimax, col = "darkgreen", add = TRUE)
 plot(roc_nr, col = "dodgerblue", add = TRUE)
 legend("bottomright", legend = paste0(model_names, ": ", auc_vec), 
-       col = c("goldenrod", "dodgerblue"), lwd = 2)
+       col = c("goldenrod", "darkgreen", "dodgerblue"), lwd = 2, bty = "n")
 ```
 
 ```{r tabling_some_results}
@@ -200,11 +216,12 @@ beta_names <-
   data.frame() %>% 
   rename(beta_coef = 1)
 
-cbind(nr_beta_est, lasso_betas) %>% 
+cbind(nr_beta_est, lasso_betas, lasso_betas_minimax) %>% 
   data.frame() %>% 
   round(digits = 4) %>% 
-  rename(NewtonRaphson = 1, LASSO = 2) %>% 
-  knitr::kable(caption = "Final Beta Coefficient Estimates")
+  rename(NewtonRaphson = 1, LASSO_GreatestMeanAUC = 2, LASSO_MinimaxAUC = 3) %>% 
+  kableExtra::kbl(caption = "Final Beta Coefficient Estimates") %>% 
+  kableExtra::kable_styling(latex_options = "striped")
 ```
 
 ## Comparison to GLMNET Lasso
