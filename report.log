@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.5.23)  24 MAR 2022 10:20
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.5.23)  27 MAR 2022 17:46
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1516,34 +1516,44 @@ pt>
 File: report_files/figure-latex/unnamed-chunk-2-1.pdf Graphic file (type pdf)
 <use report_files/figure-latex/unnamed-chunk-2-1.pdf>
 Package pdftex.def Info: report_files/figure-latex/unnamed-chunk-2-1.pdf used o
-n input line 170.
+n input line 173.
 (pdftex.def)             Requested size: 469.77116pt x 409.54408pt.
 [2] <cor_rank.png, id=33, 729.72626pt x 644.4075pt>
 File: cor_rank.png Graphic file (type png)
 <use cor_rank.png>
-Package pdftex.def Info: cor_rank.png used on input line 172.
+Package pdftex.def Info: cor_rank.png used on input line 175.
 (pdftex.def)             Requested size: 469.75122pt x 414.82845pt.
 [3 <./report_files/figure-latex/unnamed-chunk-2-1.pdf>] [4 <./cor_rank.png>]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 230.
+(Font)              <10> on input line 233.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 230.
+(Font)              <7> on input line 233.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 230.
-[5] [6] [7] [8]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 317.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 317.
+(Font)              <5> on input line 233.
+[5] [6] <cv_vis.png, id=80, 1045.9075pt x 586.19pt>
+File: cv_vis.png Graphic file (type png)
+<use cv_vis.png>
+Package pdftex.def Info: cv_vis.png used on input line 346.
+(pdftex.def)             Requested size: 493.25232pt x 276.44852pt.
+
+Overfull \hbox (23.4973pt too wide) in paragraph at lines 346--347
+ [][] 
+ []
+
+[7 <./cv_vis.png>] [8] [9] [10]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 391.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 391.
 (./report.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 317.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 317.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 317.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 391.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 391.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 391.
  ) 
 Here is how much of TeX's memory you used:
- 35337 strings out of 492995
- 802400 string characters out of 6132704
- 998360 words of memory out of 5000000
- 38179 multiletter control sequences out of 15000+600000
- 62078 words of font info for 90 fonts, out of 8000000 for 9000
+ 35354 strings out of 492995
+ 802581 string characters out of 6132704
+ 997360 words of memory out of 5000000
+ 38185 multiletter control sequences out of 15000+600000
+ 62410 words of font info for 94 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  62i,14n,96p,900b,609s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2017/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/lo
@@ -1563,11 +1573,13 @@ r/local/texlive/2017/texmf-dist/fonts/type1/public/lm/lmr5.pfb></usr/local/texl
 ive/2017/texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/2017/tex
 mf-dist/fonts/type1/public/lm/lmsy10.pfb></usr/local/texlive/2017/texmf-dist/fo
 nts/type1/public/lm/lmsy7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/p
-ublic/lm/lmtt10.pfb>
-Output written on report.pdf (8 pages, 344341 bytes).
+ublic/lm/lmtt10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsf
+onts/symbols/msbm10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/
+amsfonts/symbols/msbm7.pfb>
+Output written on report.pdf (10 pages, 457204 bytes).
 PDF statistics:
- 236 PDF objects out of 1000 (max. 8388607)
- 203 compressed objects within 3 object streams
- 48 named destinations out of 1000 (max. 500000)
- 10415 words of extra memory for PDF output out of 12000 (max. 10000000)
+ 256 PDF objects out of 1000 (max. 8388607)
+ 217 compressed objects within 3 object streams
+ 51 named destinations out of 1000 (max. 500000)
+ 10420 words of extra memory for PDF output out of 12000 (max. 10000000)
 

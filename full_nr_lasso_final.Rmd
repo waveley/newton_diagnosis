@@ -9,7 +9,7 @@ This file prepares our data, runs Newton-Raphson, runs LASSO, and plots some res
 
 ```{r setup, warning=FALSE, message = FALSE}
 source("./shared_code/setup.R")
-knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(cache = FALSE)
 ```
 
 ```{r data import and partition, warning=FALSE, message = FALSE}
@@ -22,6 +22,8 @@ source("./shared_code/data_prep.R")
 source("./shared_code/full_NR2.R")
 source("./shared_code/roc_func.R")
 roc_nr <- roc_func(nr_beta_est, bc_tst)
+roc_nr_1 <- roc_func(nr_beta_est, bc_tst)
+roc_nr_2 <- roc_func(nr_beta_est, bc_tst)
 ```
 
 # LASSO
@@ -45,12 +47,6 @@ bc_trn_folds <-
 source("./shared_code/cv_implementation.R")
 lambda_max <- max(t(scale(as.matrix(bc_trn[,-1]))) %*% bc_trn[,1]) / nrow(bc_trn[,-1])
 lambda_list <- list(log(lambda_max), log(0.0001), -(log(lambda_max) - log(0.0001))/100, exp)
-
-#cv_res <- cv_jt(k = 5, training = bc_trn_folds, 
-#                func = logistic_lasso, lam_start_stop_func = log, 
-#                lambda_list = lambda_list)
-
-# cv.glmnet(x, y, alpha = 1, family = "binomial", type.measure = "auc", lambda = exp(seq(log(lambda_max), log(0.00001), length.out = 1000)), nfolds = 5)
 ```
 
 ```{r lasso results}
@@ -74,9 +70,11 @@ selected_lambda_minmax <-
   as.vector()
   
 
+get_betas <- function(lambda){
 
 lasso_final_model <- logistic_lasso(inputs = bc_trn[,-1], 
                                     output = bc_trn[,1], 
+<<<<<<< HEAD
                                     lambda_vec = selected_lambda)
 
 lasso_minmax_model <- logistic_lasso(inputs = bc_trn[,-1],
@@ -85,6 +83,16 @@ lasso_minmax_model <- logistic_lasso(inputs = bc_trn[,-1],
 
 lasso_betas <- lasso_final_model[[2]] %>% t()
 lasso_betas_minmax <- lasso_minmax_model[[2]] %>% t()
+=======
+                                    lambda_vec = lambda)
+lasso_betas <- lasso_final_model[[2]] %>% t()
+return(lasso_betas)
+}
+
+lasso_betas <- get_betas(selected_lambda)
+lasso_betas_minimax <- get_betas(selected_lambda_minmax)
+
+>>>>>>> 7d666d84312d3ca094269a9cac9158ca78402b08
 # this is just for viz purposes
 tst_lambda_vec <- exp(seq(from = log(lambda_max), 
                           to = log(0.0001), 
@@ -102,12 +110,60 @@ lfr_df <- data.frame(do.call(cbind, lasso_final_range)) %>%
                values_to = "coef_est")
 
 # storing lasso ROC object
-bc_tst[,-1] <- scale(bc_tst[,-1])
+#bc_tst[,-1] <- scale(bc_tst[,-1])
 roc_lasso <- roc_func(lasso_betas, bc_tst)
 roc_minmax <- roc_func(lasso_betas_minmax, bc_tst)
 
 cv_res_lam <- cv_res[[1]]
 ```
+
+
+## Table NR, Mean Lambda, Minimax Lambda
+```{r}
+
+beta_ests <- tibble(
+  names = lasso_betas %>% rownames(),
+  nr = nr_beta_est,
+  mean_lambda = lasso_betas[,1],
+  minimax_lambda = lasso_betas_minimax[,1]
+  )
+
+get_specificities <- function(betas){
+  roc <- roc_func(betas, bc_tst)
+  spec <- roc$specificities[max(which(roc$sensitivities == 1))]
+  auc <- roc$auc[1]
+  out_list <- list(spec, auc)
+  return(out_list)
+}
+
+test <- get_specificities(nr_beta_est)
+nr_spec_auc <- get_specificities(nr_beta_est)
+#roc_nr <- roc_func(nr_beta_est, bc_tst)
+
+roc_nr$specificities[which(roc_nr$sensitivities == 1)]
+
+spec <- tibble(
+  names = "Specificities",
+  nr = get_specificities(nr_beta_est)[[1]],
+  mean_lambda = get_specificities(lasso_betas[,1])[[1]],
+  minimax_lambda = get_specificities(lasso_betas_minimax[,1])[[1]]
+)
+
+auc <- tibble(
+  names = "AUC", 
+  nr = get_specificities(nr_beta_est)[[2]],
+  mean_lambda = get_specificities(lasso_betas[,1])[[2]],
+  minimax_lambda = get_specificities(lasso_betas_minimax[,1])[[2]]
+)
+
+fin_tab <-
+  bind_rows(
+    beta_ests, spec, auc
+  )
+
+fin_tab %>% knitr::kable()
+```
+
 
 ```{r plotting_some_results}
 # each of these plots could be saved as R objects and imported into other documents
