@@ -22,8 +22,6 @@ source("./shared_code/data_prep.R")
 source("./shared_code/full_NR2.R")
 source("./shared_code/roc_func.R")
 roc_nr <- roc_func(nr_beta_est, bc_tst)
-roc_nr_1 <- roc_func(nr_beta_est, bc_tst)
-roc_nr_2 <- roc_func(nr_beta_est, bc_tst)
 ```
 
 # LASSO
