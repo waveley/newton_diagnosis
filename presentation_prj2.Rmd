@@ -17,13 +17,10 @@ header-includes:
 ```{r setup, include=FALSE}
 source("shared_code/setup.R")
 load("plotting_data.RData")
-
 knitr::opts_chunk$set(echo = TRUE)
-
 library(tidyverse)
 library(lares) # for the correlation plot 
 library(gtsummary)
-
 ## loading in the full dataset. 
 bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 ```
@@ -72,16 +69,13 @@ bc_corr <- bc %>%
   mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
   relocate(y)  %>% 
   select(-c(id, y, diagnosis))
-
 cor_cov_all <- cor(bc_corr)
-
 bad <- c(
   "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
   , "perimeter_se", "area_se"
   , "concave points_worst", "concavity_mean"
   , "texture_worst"
 )
-
 #title = "Figure 1: Correlation Heat Plot of all Covariates"
 corrplot::corrplot(cor_cov_all, 
                    method = "color",
@@ -278,4 +272,3 @@ Duncan, J. R. (2017, September 1). Information overload: When less is more in me
 Cancer Stat Facts: Female Breast Cancer.  \textit{National Cancer Institute - NIH}   https://seer.cancer.gov/statfacts/html/breast.html 
 
 American Cancer Society. (2019). Breast cancer facts & figures 2019–2020. Am Cancer Soc, 1-44.
-
