@@ -12,6 +12,10 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+source("shared_code/setup.R")
+load("plotting_data.RData")
+
+
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lares) # for the correlation plot 
@@ -110,7 +114,7 @@ Best Representative `radius_se`
 ## Full Model (Newton-Raphson)
 
 Consider the following log-likelihood, gradient, and hessian matrix. 
-First Let
+First, let
 \[
 \pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,p})  = \frac{e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}.
 \]
@@ -174,19 +178,55 @@ __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
 ## Figure 2: 5-fold Cross Validation 
 ![](images/cv_vis.png){width=105%}
 
-## Cross Validation Results 
+## Cross Validation Results: Selecting Best Lambda 
 
-Best $\lambda$ using AUC plot
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+auc_vs_lambda <- 
+  cv_res[[1]][[1]] %>% 
+  data.frame() %>% 
+  ggplot(x = lambda, y = mean_auc) +
+  geom_line(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_vline(xintercept = selected_lambda, linetype = "dashed", color = "red") +
+  geom_point(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_text(aes(x = selected_lambda, y = 0.96, label = "Lambda - Greatest Mean AUC = 0.0101"), col = "red", size = 3, hjust = -0.05) +
+#  coord_cartesian(xlim = c(0, 0.2), ylim = c(.9, 1)) +
+  labs(title = "Mean AUC vs. Lambda",
+       x = "Lambda",
+       y = "Mean AUC")
+auc_vs_lambda
+```
 
-## LASSO Coefficients
+## Cross Validation Results: LASSO Coefficients
 
-Best $\lambda$ using beta plot
-
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+beta_coef_plot <- 
+  lfr_df %>% 
+  group_by(lambda) %>% 
+  filter(beta_coef != "intercept") %>% 
+  ggplot(x = -log(lambda), y = coef_est, group = beta_coef) +
+  geom_path(aes(x = -log(lambda), y = coef_est, group = beta_coef, col = beta_coef)) +
+  geom_vline(xintercept = -log(selected_lambda), col = "black", linetype = "dashed") + 
+  geom_text(aes(x = -log(selected_lambda), y = 5, label = "Lambda - Greatest Mean AUC"), colour = "black", size = 3, hjust = 1.05) +
+  geom_vline(xintercept = -log(selected_lambda_minmax), col = "black", linetype = "dashed") +
+  geom_text(aes(x = -log(selected_lambda_minmax), y = 5, label = "Lambda - Minimax AUC"), colour = "black", size = 3, hjust = 1.05) +
+  labs(title = "Beta Coefficients in LASSO Model")
+beta_coef_plot
+```
 
 ## Coefficients Comparison 
 
+![](images/model_summ_table.png){width=105%}
+## ROC Plots
 
-## AUC 
+```{r}
+plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
+     main = "ROC Curves from Test Data Predictions")
+plot(roc_minimax, col = "darkgreen", add = TRUE)
+plot(roc_nr, col = "dodgerblue", add = TRUE)
+legend("bottomright", legend = paste0(model_names, ": ", auc_vec), 
+       col = c("goldenrod", "darkgreen", "dodgerblue"), lwd = 2, bty = "n")
+```
+
 
 
 ## Discussion 
