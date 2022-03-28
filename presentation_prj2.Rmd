@@ -15,7 +15,6 @@ output:
 source("shared_code/setup.R")
 load("plotting_data.RData")
 
-
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lares) # for the correlation plot 
@@ -57,10 +56,11 @@ Methods:
 - 569 rows and 31 columns all related to breast tissue images
 - Outcome of interest: Diagnosis (B or M) 
   - 357 benign (B) cases and 212 malignant (M) cases
-- The Covariates include information such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
+- The covariates include measurements such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
 
-## Figure 1: Correlation Heat Plot of all Covariates
-```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8}
+## Correlation Heat Plot of all Covariates
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 12, fig.asp=0.8, fig.align='center'}
 bc_corr <- bc %>% 
   mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
   relocate(y)  %>% 
@@ -82,27 +82,36 @@ corrplot::corrplot(cor_cov_all,
                    insig = "blank",
                    diag = FALSE,
                   # title=title,
-                   mar=c(0,0,10,0)) 
+                   mar = c(0,0,0,0)) 
 ```
 
-## Figure 1: Ranked Cross-Correlations
+
+## Ranking Cross-Correlations
+
+\centering
 
 ![](images/cor_rank_no_title.png){width=80%}
 
-## Figure 1: Ranked Cross-Correlations
+## Identifying Equivalence Groups
+
+\centering
 
 ![](images/cor_rank_firsteq.png){width=80%}
 
-Best Representative `radius_worst` 
+Best Proxy: `radius_worst` 
 
-## Figure 1: Ranked Cross-Correlations
+## Identifying Equivalence Groups
+
+\centering
 
 ![](images/cor_rank_secondeq.png){width=80%}
 
-Best Representative `radius_se` 
+Best Proxy: `radius_se` 
 
 
-## Table 1: Remaining Variables
+## Finally Selected Variables
+
+\centering
 
 ![Table 1](images/table1.png){width=45%}
 
@@ -160,7 +169,6 @@ for some $k \in \{ 1, \ldots, p \}$. It follows that the minimizer is given by
 
 
 
-
 ## Optimal Model (Logistic LASSO)
 
 __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
@@ -175,7 +183,11 @@ __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
   &= S \left(\hat{\beta}_k, \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda \right) 
  \end{align*} 
 
-## Figure 2: 5-fold Cross Validation 
+
+## 5-Fold Cross Validation
+
+\centering
+
 ![](images/cv_vis.png){width=105%}
 
 ## Cross Validation Results: Selecting Best Lambda 
@@ -209,24 +221,29 @@ beta_coef_plot <-
   geom_text(aes(x = -log(selected_lambda), y = 5, label = "Lambda - Greatest Mean AUC"), colour = "black", size = 3, hjust = 1.05) +
   geom_vline(xintercept = -log(selected_lambda_minmax), col = "black", linetype = "dashed") +
   geom_text(aes(x = -log(selected_lambda_minmax), y = 5, label = "Lambda - Minimax AUC"), colour = "black", size = 3, hjust = 1.05) +
-  labs(title = "Beta Coefficients in LASSO Model")
+  labs(title = "Beta Coefficients in LASSO Model", y = "Coefficient Estimate", x = "-log(lambda)") + theme(legend.position = "none")
 beta_coef_plot
 ```
 
-## Coefficients Comparison 
+## Coefficients Comparison: All Estimates
 
-![](images/model_summ_table.png){width=105%}
-## ROC Plots
+\centering
 
-```{r}
-plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
-     main = "ROC Curves from Test Data Predictions")
-plot(roc_minimax, col = "darkgreen", add = TRUE)
-plot(roc_nr, col = "dodgerblue", add = TRUE)
-legend("bottomright", legend = paste0(model_names, ": ", auc_vec), 
-       col = c("goldenrod", "darkgreen", "dodgerblue"), lwd = 2, bty = "n")
-```
+![](images/beta_comp_table_cropped.png){height=75%}
 
+## Coefficients Comparison: Model Performance
+
+\centering
+
+![](images/model_summ_table_cropped.png){width=105%}
+
+
+
+## ROC Plot
+
+\centering
+
+![](images/roc_plot.png){width=75%}
 
 
 ## Discussion 
