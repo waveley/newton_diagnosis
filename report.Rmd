@@ -22,6 +22,10 @@ header-includes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+source("shared_code/setup.R")
+load("plotting_data.RData")
+
+
 library(tidyverse)
 library(lares) # for the correlation plot 
 library(gtsummary)
@@ -100,7 +104,7 @@ corr_cross(bc_corr, # name of dataset
   labs(title= "Figure 2: Ranked Cross-Correlations")
 ```
 
-![](cor_rank.png)
+![](images/cor_rank.png)
 
 Table 1: Patient Characteristics
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -191,9 +195,11 @@ __Proposition.__ By Lemma 1 and Lemma 3,
 
 ## 2.4 5-fold Cross Validation 
 
-To properly implement the logistic LASSO model an optimal $\lambda$ must be selected. First, we need to define our range of possible $\lambda$ values. To start we define the biggest value as $\lambda_{max}$. This is defined as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$. The smallest value in our range is $\lambda_{min} = \lambda_{max}/1000$. This formula was recommended in a paper **Find paper**, however, we found it does not achieve our derived minimum property. Therefore we imperially found $\lambda_{min}$ by starting with the suggested formula and then selecting a value a quite a bit smaller (a fourth of the size). Thus, our range of values we are going to try for $\lambda$ is $(\lambda_{max}, \lambda_{min})$ with step sizes between values on a log scale result is 100 values.  This process will decrement through the $\lambda$ values. 
+To properly implement the logistic LASSO model an optimal $\lambda$ must be selected. First, we need to define our range of possible $\lambda$ values. To start we define the biggest value as $\lambda_{max}$. This is defined as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$, coresponiding with the null model. The smallest value in our range is $\lambda_{min} = \lambda_{max}/1000$. This correspondes with a full model. This formula was recommended in a paper **Find paper**, however, we found it does not achieve our derived minimum property. Therefore we imperially found $\lambda_{min}$ by starting with the suggested formula and then selecting a value a quite a bit smaller (a fourth of the size). Thus, our range of values are between $\lambda_{max}$ and $\lambda_{min})$ with step sizes between values on a log scale result is 100 values.  This process will decrement through the $\lambda$ values. 
 
-Our goal is to select an optimal $\lambda$ value. To select the best value we will implement a 5-fold Cross Validation system. In **Figure 3** the first step of the process is to split the data into train and test data as described above. Using just the training data the cross validation procedure will implement a 5 fold process. In each fold the data will be split into 5 chunks. During the first fold the first split of data will be used as a test set while the 4 other splits will be used as the training data. The second fold will use the second split as the test and the rest as train set. This process will continue for each fold.  Each fold will produce an AUC value for each $\lambda$ in our range values. For example, in on Fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for 5 folds each $\lambda$ will have 5 AUC values. 
+Our goal is to select an optimal $\lambda$ value. To select the best value we will implement a 5-fold Cross Validation system. In **Figure 3** the first step of the process is to split the data into train and test data as described above. The test dataset will not be touch until an optimal $\lambda$ is selected and final method comparison is done. Using just the training data the cross validation procedure will implement a 5 fold process. In each fold the data will be split into 5 chunks. During the first fold the first split of data will be used as a test set while the 4 other splits will be used as the training data. The second fold will use the second split as the test and the rest as train set. This process will continue for each fold.  Each fold will produce an AUC value for each $\lambda$ in our range values. For example, in one fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for 5 folds each $\lambda$ will have 5 AUC values. 
+
+A grid search will also be done to modify our $\lambda$ range to extra precision. **Need to expand here**
 
 To select our optimal we will use two processes greatest mean AUC or Minimax AUC 
 
@@ -203,22 +209,92 @@ The Minimax AUC selects the worst AUC value for each 100 $\lambda$ in our range.
 
 The greatest mean AUC and Minimax AUC optimal models will be compared against the full model. 
 
-![Figure 3](cv_vis.png){width=105%}
+![Figure 3](images/cv_vis.png){width=105%}
 
+## 2.5 Final Model Evaulation
+
+To compare our full model with our two optimal models we will use the $\beta$ values specified by each of our models on our test dataset. The test dataset was held out until the end process. We we evaulate the methods based on the ROC curves, AUC, Sensitivity, Sensitivity values as well as the number of predictors used in the model. 
+
+*This seciton might not be needed. I wanted to highlight Charly's question from the pres...*
 
 # 3.0 Results 
 
 ## 3.1 Cross-Validation Results
 
+Evaluating the cross validation results 
+
+Figure #: Cross Validation Results: Selecting Best Lambda 
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+auc_vs_lambda <- 
+  cv_res[[1]][[1]] %>% 
+  data.frame() %>% 
+  ggplot(x = lambda, y = mean_auc) +
+  geom_line(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_vline(xintercept = selected_lambda, linetype = "dashed", color = "red") +
+  geom_point(aes(x = lambda, y = mean_auc), col = "black") +
+  geom_text(aes(x = selected_lambda, y = 0.96, label = "Lambda - Greatest Mean AUC = 0.0101"), col = "red", size = 3, hjust = -0.05) +
+#  coord_cartesian(xlim = c(0, 0.2), ylim = c(.9, 1)) +
+  labs(title = "Mean AUC vs. Lambda",
+       x = "Lambda",
+       y = "Mean AUC")
+auc_vs_lambda
+```
+
+
+Figure #: Cross Validation Results: LASSO Coefficients
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+beta_coef_plot <- 
+  lfr_df %>% 
+  group_by(lambda) %>% 
+  filter(beta_coef != "intercept") %>% 
+  ggplot(x = -log(lambda), y = coef_est, group = beta_coef) +
+  geom_path(aes(x = -log(lambda), y = coef_est, group = beta_coef, col = beta_coef)) +
+  geom_vline(xintercept = -log(selected_lambda), col = "black", linetype = "dashed") + 
+  geom_text(aes(x = -log(selected_lambda), y = 5, label = "Lambda - Greatest Mean AUC"), colour = "black", size = 3, hjust = 1.05) +
+  geom_vline(xintercept = -log(selected_lambda_minmax), col = "black", linetype = "dashed") +
+  geom_text(aes(x = -log(selected_lambda_minmax), y = 5, label = "Lambda - Minimax AUC"), colour = "black", size = 3, hjust = 1.05) +
+  labs(title = "Beta Coefficients in LASSO Model", y = "Coefficient Estimate", x = "-log(lambda)") + theme(legend.position = "none")
+beta_coef_plot
+```
+
+
+
+
+
 ## 3.2 Coefficient Model Comparison 
 
+
+
+![](images/beta_comp_table_cropped.png){height=75%}
+
+
+![](images/model_summ_table_cropped.png){width=105%}
+
+
+
 ## 3.3 Model Validation Results 
+
+
+![](images/roc_plot.png){width=75%}
 
 
 
 # 4.0 Dissucsion 
 
 ## 4.1. Summary of Findings
+
+
+
+- Lasso-logistic model, with fewer predictors, out-performed the logistic model with all selected predictors.
+ <!-- - *however*, full model was not bad (AUC > 0.96)-->
+- Ideal performance is to accurately classify every patient
+- Balancing sensitivity and specificity
+  -   False positives vs false negatives
+  -   Decision boundaries
+- Future work
+
 
 ## 4.2. Limitations
 

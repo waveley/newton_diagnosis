@@ -67,7 +67,7 @@ Toward this end, we will develop and evaluate the performance of two predictive 
 
 ## Correlation Heat Plot of all Covariates
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 12, fig.asp=0.8, fig.align='center'}
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8, fig.align='center'}
 bc_corr <- bc %>% 
   mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
   relocate(y)  %>% 
@@ -89,7 +89,7 @@ corrplot::corrplot(cor_cov_all,
                    insig = "blank",
                    diag = FALSE,
                   # title=title,
-                   mar = c(0,0,0,0)) 
+                   mar = c(0,0,10,0)) 
 ```
 
 
@@ -180,7 +180,21 @@ Our coordinate descent algorithm proceeds as follows.
 Note: the middle loop terminates when a given Taylor expansion no longer yields updates (within the specified tolerance) to $\boldsymbol\beta$ in the inner loop.
 
 
-## 5-Fold Cross Validation
+## Cross Validation: Setting Initial $\lambda$ Range 
+
+$\lambda_{max}$:  smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$. 
+
+ - Produces Null Model 
+ 
+$\lambda_{min} = \lambda_{max}/1000$. 
+
+ - Produces Full Model 
+ 
+Step size selected so we have 100 values, on a log scale. 
+
+
+
+## Cross Validation: Full Process
 
 \centering
 
@@ -227,13 +241,6 @@ beta_coef_plot
 
 ![](images/beta_comp_table_cropped.png){height=75%}
 
-## Coefficients Comparison: Model Performance
-
-\centering
-
-![](images/model_summ_table_cropped.png){width=105%}
-
-
 
 ## ROC Plot
 
@@ -242,10 +249,21 @@ beta_coef_plot
 ![](images/roc_plot.png){width=75%}
 
 
+## Model Performance
+
+\centering
+
+![](images/model_summ_table_cropped.png){width=105%}
+
+
+
+
+
+
 ## Discussion 
 
 - Lasso-logistic model, with fewer predictors, out-performed the logistic model with all selected predictors.
-  - *however*, full model was not bad (AUC > 0.96)
+ <!-- - *however*, full model was not bad (AUC > 0.96)-->
 - Ideal performance is to accurately classify every patient
 - Balancing sensitivity and specificity
   -   False positives vs false negatives
