@@ -32,7 +32,7 @@ bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 
 As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection.
 
-Improvements in tumor imaging technology used in screening procedures have allowed us access to more data than ever before, ideally to construct better ways to evaluate disease severity
+Improvements in tumor imaging technology used in screening procedures have allow us access to more data than ever before, ideally to construct better ways to evaluate disease severity.
 
 However... data $\ne$ information.
 
@@ -63,7 +63,7 @@ Toward this end, we will develop and evaluate the performance of two predictive 
 - 569 rows and 31 columns related to breast tissue images
 - Outcome of interest: Diagnosis (B or M) 
   - 357 benign (B) cases and 212 malignant (M) cases
-- The available predictors include measurements such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
+- The available predictors include summary statistics for tumor characteristics such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
 
 ## Correlation Heat Plot of all Covariates
 
