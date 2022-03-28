@@ -1,0 +1,71 @@
+---
+title: |
+  | P8160 - Less is More: 
+  | Comparing Logistic and Lasso-Logistic Regression in Breast Cancer Diagnosis
+author: |
+  | Amy Pitts, Hun Lee, Jimmy Kelliher,
+  | Tucker Morgan, and Waveley Qiu
+date: "2022-03-28"
+output:
+  beamer_presentation:
+    colortheme: "dolphin"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Full Model: Newton-Raphson
+
+Consider the following log-likelihood, gradient, and hessian matrix. 
+First, let
+\[
+\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,p})  = \frac{e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}.
+\]
+**The log-likelihood:**
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{p}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{p}_{j=1} \beta_jx_{i,j} \right) \right) \right]
+\]
+**The gradient:**
+\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[  \begin{matrix} \sum^n y_i-\pi_i & \sum^n x_{i,1}(y_i-\pi_i) & \dots & \sum^n x_{i,p} (y_i-\pi_i) \end{matrix}\right]^{T}_{1 \times (p+1)} 
+\]
+**The hessian:** produces a matrix $(p+1 \times p+1)$
+\[ 
+\nabla^2 l(\mathbf{X}|\vec{\beta}) = - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i)
+\]
+
+
+## Optimal Model: Logistic LASSO
+
+For vector $\boldsymbol\alpha \in \mathbb{R}^{p + 1}$, define $g : \mathbb{R}^{p+1} \to \mathbb{R}$ to be
+  \[ g(\boldsymbol\beta) \equiv - \frac{1}{2n} \sum_{i = 1}^n w_i (z_i - \mathbf{X}_i^t \boldsymbol\beta )^2 + O(\boldsymbol\alpha), \]
+the Taylor expansion of our log-likelihood centered around $\boldsymbol\alpha$, where
+  \begin{align*}
+    z_i &\equiv \mathbf{X}_i^t \boldsymbol\alpha + \frac{y_i - \pi_i}{w_i}, \tag{effective response} \\
+    w_i &\equiv \pi_i (1 - \pi_i), \text{ and} \tag{effective weights} \\
+    \pi_i &\equiv \frac{e^{\mathbf{X}_i^t \boldsymbol\alpha}}{1 + e^{\mathbf{X}_i^t \boldsymbol\alpha}}
+  \end{align*}
+for $i \in \{1, \ldots, n \}.$
+
+## Optimal Model: Logistic LASSO
+
+It follows that for any $\lambda \in \mathbb{R}_+$,
+  \[
+    \underset{\beta_k \in \mathbb{R}}{\arg \min} \left\{ g(\boldsymbol\beta) + \lambda \sum_{j = 1}^p |\beta_j| \right\}
+    = S \left(\hat{\beta}_k, \lambda_k \right), \text{ where}
+  \]
+  \begin{align*}
+    \hat{\beta}_k &\equiv \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right), \\
+    \lambda_k &\equiv \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda,
+  \end{align*}
+and $S$ is the soft-thresholding (or _shrinkage_) function. This is analogous to a penalized, weighted Gaussian regression.
+
+## Optimal Model: Logistic LASSO
+
+Our coordinate descent algorithm proceeds as follows.
+
+- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$
+- Middle Loop: Update $\boldsymbol\alpha = \boldsymbol\beta$ and Taylor expand $g$ around $\boldsymbol\alpha$.
+- Inner Loop: Update $\beta_k = S \left(\hat{\beta}_k, \lambda_k \right)$ sequentially for $k \in \{ 0, 1, \ldots, p, 0, 1, \ldots, p, 0, 1, \ldots \}$ until convergence.
+
+Note: the middle loop terminates when a given Taylor expansion no longer yields updates (within the specified tolerance) to $\boldsymbol\beta$ in the inner loop.
