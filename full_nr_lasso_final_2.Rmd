@@ -188,18 +188,18 @@ auc_vs_lambda <-
        x = "Lambda",
        y = "Mean AUC")
 
-save(cv_res, nr1, roc_lasso, roc_minmax, roc_nr, beta_coef_plot, betas_table_final, auc_vs_lambda, selected_lambda, selected_lambda_minmax, file = "plotting_data.RData")
-
 # Final ROC plots
 auc_vec <- c(round(roc_lasso$auc[1], digits = 4),
              round(roc_minimax$auc[1], digits = 4),
              round(roc_nr$auc[1], digits = 4))
-model_names <- c("LASSO Greatest Mean AUC", "LASSO MinMax AUC", "Newton-Raphson")
-ggroc(list(roc_lasso, roc_minimax, roc_nr), legacy.axes = TRUE) +
-  scale_color_discrete(labels = paste0(model_names, " (", auc_vec, ")"),
-                       name = "Models (AUC)") +
-  geom_abline(intercept = 0, slope = 1, color = "grey") +
-  labs(title = "ROC Curves from Test Data Predictions")
+model_names <- c("LASSO Greatest Mean AUC", "LASSO MiniMax AUC", "Newton-Raphson")
+
+## ggplot option, but I think we were leaning base R below
+# ggroc(list(roc_lasso, roc_minimax, roc_nr), legacy.axes = TRUE) +
+#   scale_color_discrete(labels = paste0(model_names, " (", auc_vec, ")"),
+#                        name = "Models (AUC)") +
+#   geom_abline(intercept = 0, slope = 1, color = "grey") +
+#   labs(title = "ROC Curves from Test Data Predictions")
 
 ## another option for plotting ROC curves
 plot(roc_lasso, legacy.axes = TRUE, col = "goldenrod", 
@@ -208,6 +208,9 @@ plot(roc_minimax, col = "darkgreen", add = TRUE)
 plot(roc_nr, col = "dodgerblue", add = TRUE)
 legend("bottomright", legend = paste0(model_names, ": ", auc_vec), 
        col = c("goldenrod", "darkgreen", "dodgerblue"), lwd = 2, bty = "n")
+
+# saving plot data
+save(cv_res, nr1, roc_lasso, roc_minimax, roc_nr, selected_lambda, selected_lambda_minmax, auc_vec, model_names, lfr_df, file = "plotting_data.RData")
 ```
 
 ```{r tabling_some_results}
