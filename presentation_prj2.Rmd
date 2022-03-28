@@ -124,8 +124,7 @@ Best Proxy: `radius_se`
 
 <!--Talk about test and train split -->
 
-
-## Full Model (Newton-Raphson)
+## Full Model: Newton-Raphson
 
 Consider the following log-likelihood, gradient, and hessian matrix. 
 First, let
@@ -143,50 +142,43 @@ First, let
 \nabla^2 l(\mathbf{X}|\vec{\beta}) = - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i)
 \]
 
-<!--likelihood function:
-\[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
-\] -->
-<!--
-\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) + \log( 1 - pi_i)  \right) \right]
-\]-->
 
-<!--
-\begin{align*}
- \nabla^2 l(\mathbf{X}|\vec{\beta}) &= - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i) \\
- &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
-\end{align*}
--->
+## Optimal Model: Logistic LASSO
+
+For vector $\boldsymbol\alpha \in \mathbb{R}^{p + 1}$, define $g : \mathbb{R}^{p+1} \to \mathbb{R}$ to be
+  \[ g(\boldsymbol\beta) \equiv - \frac{1}{2n} \sum_{i = 1}^n w_i (z_i - \mathbf{X}_i^t \boldsymbol\beta )^2 + O(\boldsymbol\alpha), \]
+the Taylor expansion of our log-likelihood centered around $\boldsymbol\alpha$, where
+  \begin{align*}
+    z_i &\equiv \mathbf{X}_i^t \boldsymbol\alpha + \frac{y_i - \pi_i}{w_i}, \tag{effective response} \\
+    w_i &\equiv \pi_i (1 - \pi_i), \text{ and} \tag{effective weights} \\
+    \pi_i &\equiv \frac{e^{\mathbf{X}_i^t \boldsymbol\alpha}}{1 + e^{\mathbf{X}_i^t \boldsymbol\alpha}}
+  \end{align*}
+for $i \in \{1, \ldots, n \}.$
+
+## Optimal Model: Logistic LASSO
+
+It follows that for any $\lambda \in \mathbb{R}_+$,
+  \[
+    \underset{\beta_k \in \mathbb{R}}{\arg \min} \left\{ g(\boldsymbol\beta) + \lambda \sum_{j = 1}^p |\beta_j| \right\}
+    = S \left(\hat{\beta}_k, \lambda_k \right), \text{ where}
+  \]
+  \begin{align*}
+    \hat{\beta}_k &\equiv \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right), \\
+    \lambda_k &\equiv \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda,
+  \end{align*}
+and $S$ is the soft-thresholding (or _shrinkage_) function. This is analogous to a penalized, weighted Gaussian regression.
+
+## Optimal Model: Logistic LASSO
+
+Our coordinate descent algorithm proceeds as follows.
+
+- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$
+- Middle Loop: Update $\boldsymbol\alpha = \boldsymbol\beta$ and Taylor expand $g$ around $\boldsymbol\alpha$.
+- Inner Loop: Update $\beta_k = S \left(\hat{\beta}_k, \lambda_k \right)$ sequentially for $k \in \{ 0, 1, \ldots, p, 0, 1, \ldots, p, 0, 1, \ldots \}$ until convergence.
+
+Note: the middle loop terminates when a given Taylor expansion no longer yields updates (within the specified tolerance) to $\boldsymbol\beta$ in the inner loop.
 
 
-## Optimal Model (Logistic LASSO)
-
-
-__Lemma 1.__ Consider the optimization problem
-  \[ \min_{x \in \mathbb{R}}  \left\{ \frac{1}{2}(x - b)^2 + c|x| \right\} \]
-for $b \in\mathbb{R}$ and $c \in \mathbb{R}_{++}$. It follows that the minimizer is given by
-  \[ \hat{x} = S(b, c), \]
-where $S$ is the soft-thresholding operator.
-
-__Lemma 2.__ Consider the optimization problem
-  \[ \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 \right\} \]
-for some $k \in \{ 1, \ldots, p \}$. It follows that the minimizer is given by
-  \[ \hat{\beta}_k = \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right). \]
-
-
-
-## Optimal Model (Logistic LASSO)
-
-__Lemma 3.__ With $\hat{\beta}_k$ defined as above,
-\begin{align*}
-\min_{\beta_k \in \mathbb{R}}& \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
-  &= \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2}(\beta_k - \hat{\beta}_k)^2 + \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda |\beta_k| \right\}.
-\end{align*}
-
-<!--__Proposition.__--> By Lemma 1 and Lemma 3,
-\begin{align*}
- \underset{\beta_k \in \mathbb{R}}{\arg \min} & \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
-  &= S \left(\hat{\beta}_k, \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda \right) 
- \end{align*} 
 
 
 ## 5-Fold Cross Validation
