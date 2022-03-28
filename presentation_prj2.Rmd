@@ -1,7 +1,7 @@
 ---
 title: |
-  | P8160 - Breast Cancer Data:
-  | To lasso or to not lasso
+  | P8160 - Less is More: 
+  | Comparing Logistic and Lasso-Logistic Regression in Breast Cancer Diagnosis
 author: |
   | Amy Pitts, Hun Lee, Jimmy Kelliher,
   | Tucker Morgan, and Waveley Qiu
@@ -38,14 +38,16 @@ American Cancer Society Guideline for Breast Cancer Screening:
 - Women between ages 40-44 should begin annual screening via mammogram
 - Women between ages 45-54 should screened annually via mammogram
 
+## Imaging Data and Information Overload
+
+Can we reduce the amount of information we need to collect while maintaining (or
+increasing) predictive power?
+
 <!-- Using the mammography or Ultrasonography images radiologist -->
 
-## Goal 
+## Goal
 
-With using all the collected imagine data we want to develop an algorithm to predict diagnosis. 
-Since diagnosis is a binary outcome a logistic regression will be utilized. 
-
-Methods: 
+Toward this end, we want to develop and evaluate the performance of two predictive models.
 
 - Newton-Raphson Algorithm (Full Model)
 - Logistic LASSO Algorithm (Optimal Model)
@@ -56,7 +58,7 @@ Methods:
 - 569 rows and 31 columns all related to breast tissue images
 - Outcome of interest: Diagnosis (B or M) 
   - 357 benign (B) cases and 212 malignant (M) cases
-- The covariates include measurements such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
+- The available predictors include measurements such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
 
 ## Correlation Heat Plot of all Covariates
 
@@ -257,6 +259,8 @@ beta_coef_plot
   
 
 ## Resources 
+
+Duncan, J. R. (2017, September 1). Information overload: When less is more in medical imaging. De Gruyter. Retrieved March 27, 2022, from https://www.degruyter.com/document/doi/10.1515/dx-2017-0008/html?lang=en 
 
 Cancer Stat Facts: Female Breast Cancer.  \textit{National Cancer Institute - NIH}   https://seer.cancer.gov/statfacts/html/breast.html 
 
