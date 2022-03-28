@@ -25,9 +25,8 @@ bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 ```
 
 ## Motivation
-Diagnosing breast cancer is extremely important. 
 
-According to NIH there has been an estimated: 
+According to NIH, there have been an estimated: 
 
 - 281,550 new cases of breast cancer in women in 2021, 
 - 43,600 breast cancer in women related deaths in 2021.
@@ -55,7 +54,7 @@ Toward this end, we want to develop and evaluate the performance of two predicti
 
 ## Data 
 
-- 569 rows and 31 columns all related to breast tissue images
+- 569 rows and 31 columns related to breast tissue images
 - Outcome of interest: Diagnosis (B or M) 
   - 357 benign (B) cases and 212 malignant (M) cases
 - The available predictors include measurements such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension.
@@ -250,13 +249,12 @@ beta_coef_plot
 
 ## Discussion 
 
-- Goal is accurately classify every patient
-- Balancing Sensitivity vs. Specificity. 
-  - In first screening cases want to catch every case. Maximize Sensitivity.  
-  
-  
-  
-  
+- Ideal performance is to accurately classify every patient
+- Balancing sensitivity and specificity
+  -   False positives vs false negatives
+  -   Decision boundaries
+- Future work
+
 
 ## Resources 
 
