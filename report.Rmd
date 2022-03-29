@@ -167,7 +167,7 @@ Finally, using the gradient we can derive our hessian matrix. Note that due to t
  &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
 \end{align*}
 
-Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be negative definite at all parameters making the this a well behaved problem. Using the likelihood, gradient and hessian the Newton-Raphson algorithm was implement in R and can be seen in **Appendix #**. There are two modification that have been made to the algorithm. The first is to control assent direction by checking the eigen values are negative representing a negative definite matrix. The second modification is to include half stepping to increase the speed of the algorithm. Note that major problems arise when highly correlated variables are included in the model. Without excluding the `r length(10)` variables the Newton-Raphson method would not converge due to multicollinearity issues. 
+Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be negative definite at all parameters making the this a well behaved problem. Plus, the logistic regression regression objective function is globally concave and hence there exists one global optimum. Using the likelihood, gradient and hessian the Newton-Raphson algorithm was implement in R and can be seen in **Appendix #**. There are two modification that have been made to the algorithm. The first is to control assent direction by checking the eigen values are negative representing a negative definite matrix. The second modification is to include half stepping to increase the speed of the algorithm. Note that major problems arise when highly correlated variables are included in the model. To be specific, as Newton-Rapshon algorithm proceeds, the absolute values of $\beta_i$ continue to increase as Newton Raphson algorithm proceeds. This causes some of the elements in p vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, Newton Raphson algorithm fails to reach the convergence of maximum likelihood estimation. Without excluding the `r length(10)` variables the Newton-Raphson method would not converge due to multicollinearity issues. 
 
 
 ## 2.3 Logistic LASSO Algorithm 
@@ -223,7 +223,7 @@ and $S$ is the soft-thresholding (or _shrinkage_) function. This is analogous to
 
 Our coordinate descent algorithm proceeds as follows.
 
-- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$
+- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$ where $\lambda_{\max} = \frac{max|X^Ty|}{n}$
 - Middle Loop: Update $\boldsymbol\alpha = \boldsymbol\beta$ and Taylor expand $g$ around $\boldsymbol\alpha$.
 - Inner Loop: Update $\beta_k = S \left(\hat{\beta}_k, \lambda_k \right)$ sequentially for $k \in \{ 0, 1, \ldots, p, 0, 1, \ldots, p, 0, 1, \ldots \}$ until convergence.
 
@@ -343,7 +343,7 @@ Comparing the Newton Raphson full model against two Optimal models (greatest mea
 
 ## 4.2. Limitations
 
-Which the culling of the variables to limit high correlations we might have not selected the best representative of the correlation group. This might be a limitation since we did not try to use different representative of the equivalence classes group. 
+Which the culling of the variables to limit high correlations we might have not selected the best representative of the correlation group. This might be a limitation since we did not try to use different representative of the equivalence classes group. Besides area under the ROC curve (AUC) as metric of model performance, the accuracy rate of prediction can be also utilized as a means of measuring model  performance if the information of the cutoff probability for classification is given from medical professionals. 
 
 **The data might be to perfect resulting in inflated AUC values.**
 
