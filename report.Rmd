@@ -31,7 +31,10 @@ library(lares) # for the correlation plot
 library(gtsummary)
 
 ## loading in the full dataset. 
-bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
+bc <- read.csv("data/breast-cancer.csv") %>% 
+  as_tibble() %>% 
+  select(-id) %>% 
+  janitor::clean_names()
 
 ```
 
@@ -47,55 +50,43 @@ bc <- read.csv("data/breast-cancer.csv") %>% as_tibble()
 \newpage
 # 1. Introduction
 
-
-As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection.
-
-Improvements in tumor imaging technology used in screening procedures have allow us access to more data than ever before, ideally to construct better ways to evaluate disease severity.
-
-However... data $\ne$ information.
-
-
-
-
+As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection. Improvements in tumor imaging technology used in screening procedures have allowed us access to more data than ever before, ideally to construct better ways to evaluate disease severity. However, data does not always equate to information [1]. With more data comes more noise, and it becomes more important for statisticians and medical practitioners to separate signal from that noise.
 
 ## 1.1. Overview
 
-
 ## 1.2. Objectives
 
-In the project we want to investigate two questions: Does having more data always correspond to an advantage in diagnosis prediction? Can we reduce the amount of information we need to collect while maintaining (or increasing) predictive power?
+In this paper we investigate two questions: does having more data always correspond to an advantage in diagnosis prediction? Can we reduce the amount of data we need to collect while maintaining (or increasing) predictive power?
 
-The major objective of this project is to used the dataset provided to fit two different models both with the goes of modeling patient diagnosis. The first model will be a full Newton-Raphson algorithm (full model). The second will be a logistic-LASSO model (optimal model) to select features in our dataset. This will be implemented using path-wise coordinate-wise optimization algorithm to and 5-fold cross validation obtain the optimal solution. The algorithms for both these methods will be discussed in our methods section and corresponding code will be found in the appendix. 
-
+To this end, we use a breast cancer imaging dataset (detailed below) to fit two different models with the goal of predicting patient diagnosis outcomes. The first is a generalized linear-logistic regression model with a full set of predictors (i.e., "full model"), calculated using a Newton-Raphson optimization algorithm. The second is a penalized logistic-LASSO model (i.e., "optimal model"), which is capable of reducing the number of selected predictors from our dataset. This is implemented using a path-wise coordinate-descent optimization algorithm, and we utilize 5-fold cross validation to obtain the optimal $\lambda$ penalization term. The algorithms for each method are discussed below in the methods section and corresponding code can be found in the appendix.
 
 # 2. Methods
 
-
 ## 2.1. Data Cleaning and Exploratory Analysis
 
-The data set of interest contains 569 rows and 33 columns all related to breast tissue images. Each entry of the table represent an individual patient.  Of primary interest is the column containing information about patient diagnosis of cancer taking on values either malignant or benign.  One column contains information about patient ID which will be removed from our dataset. The other 30 columns correspond to numerical information about the breast imaging. The variables containing information such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension. These variable are going to be used to help model the diagnosis.
+The data set of interest contains 569 rows and 32 columns related to breast tissue imaging with each entry representing an individual patient. The outcome of interest is patient diagnosis, taking on values of either malignant or benign. One column contains information about patient ID, which will be removed from our dataset. The other 30 columns correspond to summary measures (mean, standard deviation, and maximum) of variables such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension. This dataset does not contain any missing values.
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
+```{r predictor correlation plot, message=FALSE, warning=FALSE, include=FALSE}
 bc_corr <- bc %>% 
   mutate(y = ifelse(diagnosis == "M", 1, 0)) %>% 
   relocate(y)  %>% 
-  select(-c(id, y, diagnosis))
+  select(-c(y, diagnosis))
 
 cor_cov_all <- cor(bc_corr)
 
 bad <- c(
   "area_mean", "area_worst", "perimeter_mean", "perimeter_worst", "radius_mean"
   , "perimeter_se", "area_se"
-  , "concave points_worst", "concavity_mean"
+  , "concave_points_worst", "concavity_mean"
   , "texture_worst"
 )
 ```
 
-In a quick exploration of the data it has been found that there is a high correlation between many of the variables. This is seen in **Figure 1**. The heat map correlation plot there are a lot of varaible with dark blue coloring representing a high correlation. High correlations can cause major issues with the methods we are going to use so understanding why there is high correlation in our data is important. 
+In a quick exploration of the data, we find many of the predictors are highly correlated with one another. In **Figure 1**, we see a heat map correlation plot where several variables have dark blue coloring representing strong relationships. High collinearity between predictors can cause major issues in regression methods, particularly with high-dimensional data. To explore the correlation further, **Figure 2** shows the 25 largest correlations in our data. We see that the highest correlation is between radius mean and perimeter mean with a correlation value of 0.998 (maximum of 1). In the graph there are 21 combinations of variables that achieve a correlation greater than 0.90, which is a cause for concern in this context. We can break these 21 pairings into equivalence classes for further inspection.
 
-To explore the correlation more **Figure 2** shows the highest 25 correlation in our data.  We see that the highest correlation is between radius mean and perimeter mean with a correlation values of 0.998. In the graph there are 21 combinations of variables that achieve a correlation over 0.90. This is cause for major concern. We can break these 21 pairings into equivalance classes for further inspection. The first grouping that are all mutually correlated are  {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents the 15 correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_sd`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group  {`concavity_mean`,`concavity_worst`, `concave.point_worst`, `concave.point_mean`} together, and we find that the best variable  proxy is `concave.point_worst`.  Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` variables in our dataset.  
+The first grouping that are all mutually correlated is {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents 15 of the correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_se`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group {`concavity_mean`, `concavity_worst`, `concave_points_worst`, `concave_points_mean`} together, and we find that the best proxy variable is `concavity_worst`. Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` in our dataset. All the predictors used can be seen in Table 1.
 
-All the variables used can be seen in Table 1. In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. This dataset does not contain any missing values. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data was standardized before fitting both of our models to help with comparability. 
+In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data was standardized before fitting both of our models to help with comparability. 
 
 **Talk about centering/standardizing the data**
 
@@ -110,7 +101,6 @@ corrplot::corrplot(cor_cov_all,
                    mar=c(0,0,1,0)) 
 ```
 
-
 ```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # this doesn't work in pdf files so it is not being run 
 corr_cross(bc_corr, # name of dataset
@@ -124,11 +114,6 @@ corr_cross(bc_corr, # name of dataset
 
 Table 1: Patient Characteristics
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-bc <- 
-  read_csv("./data/breast-cancer.csv") %>% 
-  #mutate(diagnosis = 1 * (diagnosis == "M")) %>% 
-  select(-id)
-
 remove_bad_vars <- function(indat, bad_vars){
   outdat <-
     indat %>% 
@@ -271,7 +256,7 @@ To compare our full model with our two optimal models we will use the $\beta$ va
 
 *This section might not be needed. I wanted to highlight Charly's question from the pres...*
 
-# 3.0 Results 
+# 3. Results 
 
 ## 3.1 Cross-Validation Results
 
@@ -343,7 +328,7 @@ Figure #: Comparing Full and Optimal Models Performance
 
 
 
-# 4.0 Dissucsion 
+# 4. Discussion 
 
 ## 4.1. Summary of Findings
 
@@ -371,6 +356,10 @@ Which the culling of the variables to limit high correlations we might have not 
 \newpage
 
 # References 
+
+\begin{enumerate}[label={[\arabic*]}]
+  \item  Duncan, J. R. (2017, September 1). Information overload: When less is more in medical imaging. De Gruyter. https://www.degruyter.com/document/doi/10.1515/dx-2017-0008/html?lang=en 
+\end{enumerate}
 
 
 \newpage 
