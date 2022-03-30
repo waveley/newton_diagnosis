@@ -50,9 +50,9 @@ bc <- read.csv("data/breast-cancer.csv") %>%
 \newpage
 # 1. Introduction
 
-As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection. Improvements in tumor imaging technology used in screening procedures have allowed us access to more data than ever before, ideally to construct better ways to evaluate disease severity. However, data does not always equate to information [1]. With more data comes more noise, and it becomes more important for statisticians and medical practitioners to separate signal from that noise.
-
 ## 1.1. Overview
+
+As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection. Improvements in tumor imaging technology used in screening procedures have allowed us access to more data than ever before, ideally to construct better ways to evaluate disease severity. However, data does not always equate to information [1]. With more data comes more noise, and it becomes more important for statisticians and medical practitioners to separate signal from that noise.
 
 ## 1.2. Objectives
 
@@ -86,9 +86,7 @@ In a quick exploration of the data, we find many of the predictors are highly co
 
 The first grouping that are all mutually correlated is {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents 15 of the correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_se`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group {`concavity_mean`, `concave_points_worst`, `concave_points_mean`} together, and we find the best proxy variable is `concave_points_mean`. Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` in our dataset. All the predictors used can be seen in Table 1.
 
-In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data was standardized before fitting both of our models to help with comparability. 
-
-**Talk about centering/standardizing the data**
+In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data is standardized before fitting both of our models to help with comparability. For LASSO regression in particular, it is best practice to center and scale data. The $\ell_1$-norm penalization in LASSO regression will unequally penalize coefficient estimates if the covariates are of different magnitudes or scales. Therefore, standardizing our data ensures equal weighting and penalization.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8}
 title = "Figure 1: Correlation Heat Plot of all Covariates"
@@ -135,29 +133,27 @@ tbl_summary(bc, by = diagnosis,
 ```
 
 
-
-
 ## 2.2 Newton-Raphson Algorithm 
 
-To implement the Newton-Raphson Algorithm we need to first examine the likelihood, and derive the gradient and Hessian matrix. 
+To implement the Newton-Raphson Algorithm we need to first examine the likelihood function and derive the gradient and Hessian matrix. 
 
-First we will look at the likelihood function for our data which has a single binary response and `r 30-length(bad)` numerical explanatory variables. First we know that
+First we will look at the likelihood function for our data, which has a single binary response and `r 30-length(bad)` numerical explanatory variables. We know that
 \[
 \pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,20}) = \frac{e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{20}x_{i,20}}}{1 + e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{20}x_{i,20}}} = \frac{e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}
 \]
 
-where $\mathbf{X_i}$ represents the $i$ observation of all 20 of our predictor variables. 
-For the data likelihood funciton is is given by 
+where $\mathbf{X_i}$ represents the $i$-th observation of all 20 of our predictor variables. 
+For our data, the likelihood function is given by 
 \[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
 \]
-where $y_i$ represents out binary outcome for the $i$ individual. 
+where $y_i$ represents out binary outcome for the $i$-th individual. 
 Finding the log-likelihood we have 
-\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{20}_{j=1} \beta_jx_{i,j} \right) \right) \right]
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{20}_{j=1} \beta_jx_{i,j} \right) \right) \right].
 \]
 
 The gradient is the partial derivative of the log-likelihood with respect to each $\beta_j$ variable. Observe 
 
-\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[ \sum^n_{i=1} \begin{matrix} y_i-\pi_i & \sum^n_{i=1} x_{i,1}(y_i-\pi_i) & \dots & \sum^n_{i=1} x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times 21)} 
+\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[ \sum^n_{i=1} \begin{matrix} y_i-\pi_i & \sum^n_{i=1} x_{i,1}(y_i-\pi_i) & \dots & \sum^n_{i=1} x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times 21)} .
 \]
 
 Finally, using the gradient we can derive our hessian matrix. Note that due to the 20 predictor variables the hessian will be a 21 by 21 matrix. 
@@ -167,7 +163,9 @@ Finally, using the gradient we can derive our hessian matrix. Note that due to t
  &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
 \end{align*}
 
-Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be negative definite at all parameters making the this a well behaved problem. Plus, the logistic regression regression objective function is globally concave and hence there exists one global optimum. Using the likelihood, gradient and hessian the Newton-Raphson algorithm was implement in R and can be seen in **Appendix #**. There are two modification that have been made to the algorithm. The first is to control assent direction by checking the eigen values are negative representing a negative definite matrix. The second modification is to include half stepping to increase the speed of the algorithm. Note that major problems arise when highly correlated variables are included in the model. To be specific, as Newton-Rapshon algorithm proceeds, the absolute values of $\beta_i$ continue to increase as Newton Raphson algorithm proceeds. This causes some of the elements in p vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, Newton Raphson algorithm fails to reach the convergence of maximum likelihood estimation. Without excluding the `r length(10)` variables the Newton-Raphson method would not converge due to multicollinearity issues. 
+Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be negative definite at all parameters making this a well-behaved problem. Plus, the logistic regression objective function is globally concave and hence there exists one global optimum. Using the likelihood, gradient, and hessian, the Newton-Raphson algorithm implemented in R can be seen in **Appendix #**. Two modifications have been made to the algorithm. The first is to control ascent direction by checking that the eigenvalues are negative, representing a negative definite matrix. The second modification is to include half-stepping to increase the speed of the algorithm.
+
+Note that major problems arise when highly correlated variables are included in the model. To be specific, as the Newton-Raphson algorithm proceeds, the absolute values of $\beta_i$ continue to increase. This causes some of the elements in the probability vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, the Newton-Raphson algorithm fails to reach the convergence of maximum likelihood estimation. Without excluding the `r length(10)` variables the Newton-Raphson method would not converge due to multicollinearity issues. 
 
 
 ## 2.3 Logistic LASSO Algorithm 
@@ -232,27 +230,23 @@ Note: the middle loop terminates when a given Taylor expansion no longer yields 
 
 
 
-## 2.4 5-fold Cross Validation 
+## 2.4 Five-fold Cross Validation 
 
-To properly implement the logistic LASSO model an optimal $\lambda$ must be selected. First, we need to define our range of possible $\lambda$ values. To start we define the biggest value as $\lambda_{max}$. This is defined as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$, coresponiding with the null model. The smallest value in our range is $\lambda_{min} = \lambda_{max}/1000$. This correspondes with a full model. This formula was recommended in a paper **Find paper**, however, we found it does not achieve our derived minimum property. Therefore we imperially found $\lambda_{min}$ by starting with the suggested formula and then selecting a value a quite a bit smaller (a fourth of the size). Thus, our range of values are between $\lambda_{max}$ and $\lambda_{min})$ with step sizes between values on a log scale result is 100 values.  This process will decrement through the $\lambda$ values. 
+To properly implement the logistic LASSO model an optimal $\lambda$ must be selected. First, we need to define our range of possible $\lambda$ values. To start we define the biggest value as $\lambda_{max}$. This is defined as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$, corresponding with the null model. The smallest value in our range is $\lambda_{min} = \lambda_{max}/1000$, corresponding with a full model (or unpenalized logistic regression). This formula is recommended by Friedman et. al [2], however, we found it does not achieve our derived minimum property. Therefore we empirically found $\lambda_{min}$ by starting with the suggested formula and then selecting a value one-fourth of the size. Thus, our range of values is between $\lambda_{max}$ and $\lambda_{min})$ with step size values between on a log scale resulting in 100 values. This process will decrement through the $\lambda$ values, beginning from the null model and building out to the full model. 
 
-Our goal is to select an optimal $\lambda$ value. To select the best value we will implement a 5-fold Cross Validation system. In **Figure 3** the first step of the process is to split the data into train and test data as described above. The test dataset will not be touch until an optimal $\lambda$ is selected and final method comparison is done. Using just the training data the cross validation procedure will implement a 5 fold process. In each fold the data will be split into 5 chunks. During the first fold the first split of data will be used as a test set while the 4 other splits will be used as the training data. The second fold will use the second split as the test and the rest as train set. This process will continue for each fold.  Each fold will produce an AUC value for each $\lambda$ in our range values. For example, in one fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for 5 folds each $\lambda$ will have 5 AUC values. 
+To select the optimal $\lambda$ value we implement a five-fold cross validation algorithm. In **Figure 3** the first step of the process is to split the full dataset into train and test data as described above. The test data will not be touched until an optimal $\lambda$ is selected and final method comparison is performed. Using just the training data the cross validation procedure implements a five-fold process where the test data is split into five "folds" or chunks. During the first iteration, the first fold of data is used as a test or "validation" set while the four other splits are used as the training set. The second iteration will use the second fold as the validation set and the remaining folds as the training set. This process continues for each fold, producing an Area-Under-Curve (AUC) value for each $\lambda$ in our range of values. For example, in one fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for five folds each $\lambda$ will have five AUC values. 
 
-A grid search will also be done to modify our $\lambda$ range to extra precision. **Need to expand here**
+A grid search is used to modify our $\lambda$ range for extra precision. **Need to expand here**
 
-To select our optimal we will use two processes greatest mean AUC or Minimax AUC 
+To select our optimal tuning parameter, we use two measures: greatest mean AUC and Minimax AUC. The greatest mean AUC takes the average AUC value for each $\lambda$ in our range of 100 $\lambda$ values and selects the model with the largest AUC value as optimal. The Minimax AUC selects the minimum or worst AUC value for each of 100 $\lambda$ values in our range. Then the model with maximum-worst AUC is selected as our optimal model. The greatest mean AUC and Minimax AUC optimal models are compared against the full model below. 
 
-The greatest mean AUC takes the average AUC value for each 100 $\lambda$ in our range. Then is selects the largest AUC value as the optimal model. 
+**Figure 3: Cross Validation Procedure**
 
-The Minimax AUC selects the worst AUC value for each 100 $\lambda$ in our range. Then the maximum worst AUC is selected as our optional model. 
-
-The greatest mean AUC and Minimax AUC optimal models will be compared against the full model. 
-
-![Figure 3](images/cv_vis.png){width=105%}
+![](images/cv_vis.png){width=105%}
 
 ## 2.5 Final Model Evaulation
 
-To compare our full model with our two optimal models we will use the $\beta$ values specified by each of our models on our test dataset. The test dataset was held out until the end process. We we evaulate the methods based on the ROC curves, AUC, Sensitivity, Sensitivity values as well as the number of predictors used in the model. 
+Each optimal $\lambda$ selected is then used to fit a final model on the full training dataset. To compare these optimal models with the full (Newton-Raphson) model, we use the $\beta_j$ values specified by each to make classification predictions based on the test dataset, which is held out of analysis prior to this step. In other words, the $\beta_j$ values in each model are used in conjunction with the test data, $X_{ij}$, to predict class probabilities for each testing data observation. These predicted probabilities are compared with the observed outcomes in the testing data to produce receiver operating characteristic (ROC) curves, as well as AUC, sensitivity, and specificity values.
 
 *This section might not be needed. I wanted to highlight Charly's question from the pres...*
 
@@ -260,12 +254,11 @@ To compare our full model with our two optimal models we will use the $\beta$ va
 
 ## 3.1 Cross-Validation Results
 
-Evaluating the cross validation results we can first confirm that our $\lambda$ range of values has one maximum AUC value when using the greatest mean AUC optimal lambda method. This can be seen in **Figure #** depicting the largest AUC and corresponding lambda values by the vertical dotted line. After the vertical dotted line the AUC values decrease thus indicating that one maximum values exists in our range. 
+Evaluating the cross validation results, we can first confirm that our range of $\lambda$ values has one maximum AUC value when using the greatest mean AUC optimal lambda method. This can be seen in **Figure 4** depicting the largest AUC and corresponding lambda values by the vertical dotted line. After the vertical dotted line the AUC values decrease thus indicating one maximum values exists in our range. 
 
-We can also evaluate our cross validation results by looking at the beta estimates for each corresponding $\lambda$ values. This is seen in **Figure #**. The smallest value of log(lambda) corresponds with a our null model where all estimtates of beta are zero. The largest value of log(lambda) corresponds with a full model were no beta values are zero. The vertical lines depict the optimal lambda value chosen for both of our optimal selection methods. We see that the greatest mean AUC selected a smaller lambda and thus a model with less nonzero beta values compared to the minimax AUC method. 
+We can also evaluate our cross validation results by looking at the beta estimates for each corresponding $\lambda$ value. This is seen in **Figure 5**. The smallest value of -log(lambda) corresponds with our null model where all estimates of $\beta_j$ are zero and the $\lambda$ penalization term is large. The largest value of -log(lambda) corresponds with a full model where no $\beta_j$ values are zero. The vertical lines depict the optimal lambda value chosen for each of our selection methods. We see that the greatest mean AUC selects a larger $\lambda$ value, greater penalization, and thus a model with fewer predictor coefficients compared to the minimax AUC method. 
 
-
-Figure #: Cross Validation Results: Selecting Best Lambda 
+**Figure 4: Cross Validation Results: Selecting Best Lambda**
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 auc_vs_lambda <- 
@@ -283,9 +276,7 @@ auc_vs_lambda <-
 auc_vs_lambda
 ```
 
-
-
-Figure #: Cross Validation Results: LASSO Coefficients
+**Figure 5: Cross Validation Results: LASSO Coefficients**
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 beta_coef_plot <- 
@@ -303,26 +294,22 @@ beta_coef_plot
 ```
 
 
-
-
 ## 3.2 Model Validation Results 
 
+To compare the beta estimates in our full model and two optimal models, we can look at **Table 2**. Please note that we standardized our data so care needs to be taken before interpreting these values in the context of the project. Also note that care needs to be taken when interpreting the beta values for the optimal model because of standardization and the lambda penalty term. In **Table 2** we see that the greatest mean AUC has the most beta values equal to zero. **Table 3** also confirms that greatest mean AUC produces a model with 6 nonzero beta values, not including the intercept term. Minimax optimization selects 16 nonzero beta values. While each model has test AUC values above 0.97, the model with the largest test AUC is the greatest mean optimal model. 
 
-Comparing the best estimates in our full model and two optimal models we can look at **Table #**. Please note that we standardized our data so care needs to be taken before you can interpret the values in the context of the project. Also note that care needs to be taken when interpreting the beta values for the optimal model because of standardization and the lambda penalty term. In **Table #** we see that the greatest mean AUC has the most beta values equal to zero. In **Table #** also confirms that greatest mean AUC produces a model with 6 nonzero beta values no including the intercept. Minimax optimization selects 16 nonzero beta values.  While all the models have test data AUC values above 0.97 the model with the largest test AUC values is the greatest mean optimal model. 
+While the AUC value is a good indicator of overall classification performance, we are still confronted with the trade-off between sensitivity and specificity. Imagining is typically the first line of defense for diagnosing cancers, so optimizing sensitivity is usually of great interest. In **Table 3** we have displayed the largest specificity value achieved while maximizing sensitivity to equal 1 (all positive individuals correctly identified as positive). We can see in **Table 3**, the greatest mean AUC model has the highest specificity value. The table also shows that our full model has the lowest specificity when sensitivity is 1. This sensitivity and specificity trade-off can also be seen in our ROC curves displayed in **Figure 6**. 
 
-Since the AUC value is not perfect we are confronted with the trade off between sensitivity and specificity. Imagining is typically the first line of defense for diagnosis cancers so optimizing sensitivity is usually of great interest. In **Table #** we have displayed the specificity value the corresponds with the first time the sensitivity reachest 1. This way if we maximize sensitivity we want the model that has a high specificity. This highest specificity value corresponds with the greatest mean optimal model. The table also shows that our full model has the lowest specificity when sensitivity is 1. This sensitivity and specificity trade off can also be seen in our ROC curves displayed in **Figure #**. 
-
-
-Table #: Beta Coefficient Comparing Full and Optimal Models
+**Table 2: Beta Coefficients Comparing Full and Optimal Models**
 
 ![](images/beta_comp_table_cropped.png){height=75%}
 
-Table #: Model Output Comparing Full and Optimal Models
+**Table 3: Model Summary Comparing Full and Optimal Models**
 
-![](images/model_summ_table_cropped.png){width=105%}
+![](images/model_summ_table_cropped.png){width=85%}
 
 
-Figure #: Comparing Full and Optimal Models Performance
+**Figure 6: Comparing Full and Optimal Models Performance**
 
 ![](images/roc_plot.png){width=75%}
 
@@ -332,26 +319,23 @@ Figure #: Comparing Full and Optimal Models Performance
 
 ## 4.1. Summary of Findings
 
-**Answer these questions**
+Comparing the Newton-Raphson full model against two optimal models (greatest mean AUC, minimax AUC) the model that out-preformed the others is the greatest mean AUC optimal model. This greatest mean AUC optimal model had the fewest predictors, highest AUC value, and highest specificity when maximizing sensitivity. Of course the ideal performance is to accurately classify every patient, AUC = 1; although very close, our test performance does not reach AUC = 1. Therefore, we need to balance sensitivity and specificity, to determine the lesser of two errors: false positives vs false negatives, when setting decision boundaries.
 
-- Does having more data always correspond to an advantage in diagnosis prediction?
-- Can we reduce the amount of information we need to collect while maintaining (or
-increasing) predictive power?
-
-Comparing the Newton Raphson full model against two Optimal models (greatest mean AUC, minimax AUC) the model that out-preformed the others is greatest mean AUC optimal model. This greatest mean AUC optimal model had the fewest predictors, highest AUC value, and highest specificity when maximizing sensitivity. Of course the ideal performance is to accurately classify every patient, AUC = 1. Our test performance although extremely close does not reach AUC = 1 thus we need to balance sensitivity and specificity. To do this we need to determine which is the worst of two evils: false positives vs false negatives when setting different decision boundaries. 
-
+It is clear from our results that having more data does not always correspond to an advantage in diagnosis prediction. We found better prediction with many fewer predictors, six, in our optimal model compared to a full 20 in the model incorporating the most data. Given these results, it may benefit clinicians and practitioners to focus on certain indicators or attributes of breast imaging data in an effort to separate signal from noise.
 
 ## 4.2. Limitations
 
-Which the culling of the variables to limit high correlations we might have not selected the best representative of the correlation group. This might be a limitation since we did not try to use different representative of the equivalence classes group. Besides area under the ROC curve (AUC) as metric of model performance, the accuracy rate of prediction can be also utilized as a means of measuring model  performance if the information of the cutoff probability for classification is given from medical professionals. 
+While the initial reduction of variables to limit high correlations was beneficial, we may have not selected the best representative of the correlation group. We did not try different representatives of the equivalence classes and so this might be a limitation for further study. Besides AUC as a metric of model performance, the accuracy rate of prediction can be also utilized as a means of measuring model  performance if the information of the cutoff probability for classification is given from medical professionals.
 
-**The data might be to perfect resulting in inflated AUC values.**
+We also see AUC values very close to a perfect 1.0 in each of the models considered. This could be due to very clean and unambiguous data, which limits our knowledge of how these models might actually perform in a "real-world" setting. In the future, it would be beneficial to examine different data sets in order to better understand how these models perform on breast imaging data.
 
-**Can also talk about future work here... **
+## 4.3 Future Work
+
+Two avenues of future work were discussed above, including the consideration of different model evaluation criteria based on clinician recommendation and implementation on more ambiguous data sets. Another interesting improvement could be the implementation of Monte Carlo Cross Validation. In this project, we performed five-fold cross validation once, however this procedure can be repeated multiple times with varied folds of the training data to obtain more stable estimates of the optimal $\lambda$ value. Additionally, models may perform better on larger datasets. Here, we only had 569 observations, but more observations could help us learn more about the relationships between the imaging data and diagnosis outcome.
 
 ## 4.4. Group Contributions
 
-
+Our group worked in conjunction on many aspects of the project. Amy, Waveley, and Hun worked on developing and implementing the Newton-Raphson optimization algorithm. Jimmy worked on developing and implementing the LASSO coordinate-descent algorithm. Tucker and Waveley worked on the cross validation procedure and plotting results from these output. All group members worked on the project presentation and report in varying capacities.
 
 \newpage
 
@@ -359,6 +343,7 @@ Which the culling of the variables to limit high correlations we might have not 
 
 \begin{enumerate}[label={[\arabic*]}]
   \item  Duncan, J. R. (2017, September 1). Information overload: When less is more in medical imaging. De Gruyter. https://www.degruyter.com/document/doi/10.1515/dx-2017-0008/html?lang=en 
+  \item Friedman J, Hastie T, Tibshirani R. Regularization Paths for Generalized Linear Models via Coordinate Descent. J Stat Softw. 2010;33(1):1-22. PMID: 20808728; PMCID: PMC2929880.
 \end{enumerate}
 
 
