@@ -108,7 +108,7 @@ corr_cross(bc_corr, # name of dataset
   labs(title= "Figure 2: Ranked Cross-Correlations")
 ```
 
-![](images/cor_rank.png)
+![](images/cor_rank.png){width=80%}
 
 Table 1: Patient Characteristics
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -135,35 +135,26 @@ tbl_summary(bc, by = diagnosis,
 
 ## 2.2 Newton-Raphson Algorithm 
 
-To implement the Newton-Raphson Algorithm we need to first examine the likelihood function and derive the gradient and Hessian matrix. 
-
-First we will look at the likelihood function for our data, which has a single binary response and `r 30-length(bad)` numerical explanatory variables. We know that
+To implement the Newton-Raphson Algorithm we need to first examine the likelihood function and derive the gradient and Hessian matrix. First, we will look at the likelihood function for our data, which has a single binary response and $p$ numerical explanatory variables. We know that
 \[
-\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,20}) = \frac{e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{20}x_{i,20}}}{1 + e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{20}x_{i,20}}} = \frac{e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{20}_{j=1}\beta_jx_{i,j}}}
+\pi_i = P(Y_i=1|x_{i,1}, \dots x_{i,p}) = \frac{e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{p}x_{i,p}}}{1 + e^{\beta_0+\beta_1x_{i,1}+ \dots \beta_{p}x_{i,p}}} = \frac{e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}{1 + e^{\beta_0+\sum^{p}_{j=1}\beta_jx_{i,j}}}
 \]
-
-where $\mathbf{X_i}$ represents the $i$-th observation of all 20 of our predictor variables. 
+where $\mathbf{X_i}$ represents the $i$-th observation of all p of our predictor variables. 
 For our data, the likelihood function is given by 
 \[ L(\mathbf{X}| \mathbf{\beta}) = \prod^n_{i=1} \left[ \pi_i^{y_i}(1-\pi_i)^{1-y_i} \right]
 \]
-where $y_i$ represents out binary outcome for the $i$-th individual. 
-Finding the log-likelihood we have 
-\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{20}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{20}_{j=1} \beta_jx_{i,j} \right) \right) \right].
+where $y_i$ represents out binary outcome for the $i$-th individual. Finding the log-likelihood we have 
+\[ l(\mathbf{X}| \vec{\beta}) =\sum^n_{i=1} \left[ y_i\left(\beta_0 + \sum^{p}_{j=1}\beta_jx_{i,j}  \right) - \log\left( 1 + \exp\left(\beta_0 + \sum^{p}_{j=1} \beta_jx_{i,j} \right) \right) \right].
 \]
-
 The gradient is the partial derivative of the log-likelihood with respect to each $\beta_j$ variable. Observe 
-
-\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[ \sum^n_{i=1} \begin{matrix} y_i-\pi_i & \sum^n_{i=1} x_{i,1}(y_i-\pi_i) & \dots & \sum^n_{i=1} x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times 21)} .
+\[ \nabla l(\mathbf{X}|\vec{\beta}) = \left[ \sum^n_{i=1} \begin{matrix} y_i-\pi_i & \sum^n_{i=1} x_{i,1}(y_i-\pi_i) & \dots & \sum^n_{i=1} x_{i,20} (y_i-\pi_i) \end{matrix}\right]^{T}_{(1 \times (p+1))} .
 \]
-
-Finally, using the gradient we can derive our hessian matrix. Note that due to the 20 predictor variables the hessian will be a 21 by 21 matrix. 
-
+Finally, using the gradient we can derive our hessian matrix. Note that due to the 20 predictor variables the hessian will be a $p+1$ by $p+1$ matrix. 
 \begin{align*}
  \nabla^2 l(\mathbf{X}|\vec{\beta}) &= - \sum^n_{i=1} \begin{pmatrix} 1 \\ X \end{pmatrix} \begin{pmatrix} 1 & X \end{pmatrix} \pi_i (1-\pi_i) \\
  &= - \begin{pmatrix} 1 & X \end{pmatrix} diag( \pi_i (1-\pi_i)) \begin{pmatrix} 1 \\ X \end{pmatrix}
 \end{align*}
-
-Where $X = (x_{i,1}, \dots, x_{i, 20})$. Note that this matrix will always be negative definite at all parameters making this a well-behaved problem. Plus, the logistic regression objective function is globally concave and hence there exists one global optimum. Using the likelihood, gradient, and hessian, the Newton-Raphson algorithm implemented in R can be seen in **Appendix #**. Two modifications have been made to the algorithm. The first is to control ascent direction by checking that the eigenvalues are negative, representing a negative definite matrix. The second modification is to include half-stepping to increase the speed of the algorithm.
+Where $X = (x_{i,1}, \dots, x_{i, p})$. Note that this matrix will always be negative definite at all parameters making this a well-behaved problem. Plus, the logistic regression objective function is globally concave and hence there exists one global optimum. Using the likelihood, gradient, and hessian, the Newton-Raphson algorithm implemented in R can be seen in **Appendix #**. Two modifications have been made to the algorithm. The first is to control ascent direction by checking that the eigenvalues are negative, representing a negative definite matrix. The second modification is to include half-stepping to increase the speed of the algorithm.
 
 Note that major problems arise when highly correlated variables are included in the model. To be specific, as the Newton-Raphson algorithm proceeds, the absolute values of $\beta_i$ continue to increase. This causes some of the elements in the probability vector to be very close to 1, leading some of the elements in log(1-p) vector to be negative infinity and hence the next log likelihood to diverge to negative infinity. As a result, the Newton-Raphson algorithm fails to reach the convergence of maximum likelihood estimation. Without excluding the 10 variables the Newton-Raphson method would not converge due to multicollinearity issues. 
 
