@@ -44,20 +44,20 @@ bc <- read.csv("data/breast-cancer.csv") %>%
 {\bf Abstract}
 \end{center}
 
-|        we will write an abstract eventually.
+|        With the advancement of research methods and measurement techniques, there might exist a temptation among researchers to use as much of the data collected using these new tools as possible in the construction of predictive models. 
 
 \newpage
 # 1. Introduction
 
-## 1.1. Overview
+## 1.1. Background
 
-As breast cancer is one of the most common kinds of cancer in the United States, great efforts have been made to aid in early and accurate detection. Improvements in tumor imaging technology used in screening procedures have allowed us access to more data than ever before, ideally to construct better ways to evaluate disease severity. However, data does not always equate to information [1]. With more data comes more noise, and it becomes more important for statisticians and medical practitioners to separate signal from that noise.
+As breast cancer has become one of the most common kinds of cancer in the United States, substantial efforts have been made to aid in early and accurate detection. Along with national public health initiatives encouraging women at certain ages to schedule mammograms, great strides have been made to improve tumor imaging technology used in screening procedures. Such improvements have allowed clinicians more ways than ever to diagnose a patient, as an abundance of measurements are available and can be used to construct methods to evaluate disease severity. However, data does not always equate to information [1]. With more data comes more noise, and it becomes more important for statisticians and medical practitioners to separate signal from that noise.
 
 ## 1.2. Objectives
 
 In this paper we investigate two questions: does having more data always correspond to an advantage in diagnosis prediction? Can we reduce the amount of data we need to collect while maintaining (or increasing) predictive power?
 
-To this end, we use a breast cancer imaging dataset (detailed below) to fit two different models with the goal of predicting patient diagnosis outcomes. The first is a generalized linear-logistic regression model with a full set of predictors (i.e., "full model"), calculated using a Newton-Raphson optimization algorithm. The second is a penalized logistic-LASSO model (i.e., "optimal model"), which is capable of reducing the number of selected predictors from our dataset. This is implemented using a path-wise coordinate-descent optimization algorithm, and we utilize 5-fold cross validation to obtain the optimal $\lambda$ penalization term. The algorithms for each method are discussed below in the methods section and corresponding code can be found in the appendix.
+To this end, we use a breast cancer imaging dataset (detailed below) to fit two different models with the goal of predicting patient diagnosis outcomes. The first is a generalized linear-logistic regression model with a full set of predictors (i.e., "full model"), calculated using a Newton-Raphson optimization algorithm. The second is a penalized logistic-LASSO model (i.e., "optimal model"), which is capable of reducing the number of selected predictors from our dataset. This is implemented using a path-wise coordinate-descent optimization algorithm, and we utilize five-fold cross validation to obtain the optimal $\lambda$ penalization term. The algorithms for each method are discussed below in the methods section and corresponding code can be found in the appendix.
 
 # 2. Methods
 
