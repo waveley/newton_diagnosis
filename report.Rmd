@@ -25,7 +25,6 @@ knitr::opts_chunk$set(echo = TRUE)
 source("shared_code/setup.R")
 load("plotting_data.RData")
 
-
 library(tidyverse)
 library(lares) # for the correlation plot 
 library(gtsummary)
@@ -224,15 +223,18 @@ Note: the middle loop terminates when a given Taylor expansion no longer yields 
 
 ## 2.4 Five-fold Cross Validation 
 
-As the performance of the logistic LASSO model depends on the penalty factor ($\lambda$) that is selected, we will perform cross validation in order to determine the $\lambda$ that produces a model that maximizes outcome prediction accuracy. 
+As the performance of the logistic LASSO model depends on the penalty factor ($\lambda$) that is selected, we will perform cross validation in order to determine the $\lambda$ that produces a model that optimizes a metric of interest. 
 
-First, we need to define our range of possible $\lambda$ values, where the largest value produces a model with no predictors selected and the smallest value would produce a model with all predictors selected. While we could make $\lambda_{max}$ infinitely large, we will define the maximum value as as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$. This value works out to be the maximum of the inner product between our predictors ($X$) and our outcome ($Y$) from the imaging dataset. Likewise, while we could make $\lambda_{min}$ infinitely small (but greater than 0), we will select the largest value that produces the full model, which is identical to the model produced by the Newton Raphson algorithm we have previously defined. As recommended by Friedman et. al [2], we started by setting the smallest value in our range to be $\lambda_{min} = \frac{\lambda_{max}}{1000}$. However, we were not able to use this value as as the minimum $\lambda$ in our range because it did not select the full model. Thus, we used the suggested $\frac{\lambda_{max}}{1000}$ as a starting point and empirically derived our $\lambda_{min}$ by halving the working value a few times -- ultimately, we saw that a value of $\frac{\lambda_{max}}{4000}$ would be a suffice as a sufficiently small penalty factor that would select the full model. We then constructed a uniform sequence between $\log{\lambda_{max}}$ and $\log{\lambda_{min}}$ so that the sequence would contain 100 values and then exponentiated all values in the sequence. In this fashion, we thus created a range of 100 values between $\lambda_{max}$ and $\lambda_{min})$ a log scale. 
+First, we need to define our range of possible $\lambda$ values, where the largest value produces a model with no predictors selected and the smallest value would produce a model with all predictors selected. While we could make $\lambda_{max}$ infinitely large, we will define the maximum value as as the smallest penalty for which $\beta_k=0$ for all $k\in\{1, \dots, p\}$. This value works out to be the maximum of the inner product between our predictors ($X$) and our outcome ($Y$) from the imaging dataset. Likewise, while we could make $\lambda_{min}$ infinitely small (but greater than 0), we will select the largest value that produces the full model, which is identical to the model produced by the Newton Raphson algorithm we have previously defined. As recommended by Friedman et. al [2], we started by setting the smallest value in our range to be $\lambda_{min} = \frac{\lambda_{max}}{1000}$. However, we were not able to use this value as as the minimum $\lambda$ in our range because it did not select the full model. Thus, we used the suggested $\frac{\lambda_{max}}{1000}$ as a starting point and empirically derived our $\lambda_{min}$ by halving the working value a few times -- ultimately, we saw that a value of $0.0001\,\,\left(\approx\frac{\lambda_{max}}{4000}\right)$ would be a suffice as a sufficiently small penalty factor that would select the full model. We then constructed a uniform sequence between $\log{\lambda_{max}}$ and $\log{\lambda_{min}}$ so that the sequence would contain 100 values and then exponentiated all values in the sequence. In this fashion, we thus created a range of 100 values between $\lambda_{max}$ and $\lambda_{min}$ a log scale. 
 
 After defining this range of $\lambda$ values, we implemented a five-fold cross validation algorithm to identify the best $\lambda$. In **Figure 3** the first step of the process is to split the full dataset into train and test data as described above. The test data will not be touched until an optimal $\lambda$ is selected and final method comparison is performed. Using just the training data the cross validation procedure implements a five-fold process where the test data is split into five "folds" or chunks. During the first iteration, the first fold of data is used as a test or "validation" set while the four other splits are used as the training set. The second iteration will use the second fold as the validation set and the remaining folds as the training set. This process continues for each fold, producing an Area-Under-the- ROC-Curve (AUC) value for each $\lambda$ in our range of values. For example, in one fold we have 100 $\lambda$ values all with one corresponding AUC value. Thus, for five folds each $\lambda$ will have five associated AUC values. 
 
-As we implemented the five-fold cross validation process, we grew concerned over the potential of our step size between $\lambda$ values being too large and that the changes between models selected by consecutive were too dramatic. To increase the precision of our estimate and to prevent the process from selecting more than one variable between penalty values, we modified the simple cross validation procedure to include a grid search around perceived maximums. 
+To select our optimal tuning parameter, we calculated two AUC statistics for each $\lambda$ in our five-fold cross validation: mean AUC and Minimax AUC. The mean AUC is a simple average of the five AUC value produced from the cross validation process for each $\lambda$ in our range. The Minimax AUC selects the minimum of the maximum $1-AUC$ values over all 100 $\lambda$ values to account for the scenario where we aim to minimize the possible loss for the worst case scenario. Then the model with minimum-worst AUC is selected as our optimal model. The greatest mean AUC and Minimax AUC optimal models are compared against the full model below.
 
-To select our optimal tuning parameter, we use two measures: greatest mean AUC and Minimax AUC from 5-fold cross validation. The greatest mean AUC takes the average AUC value for each $\lambda$ in our range of 100 $\lambda$ values and selects the model with the largest AUC value as optimal. The Minimax AUC selects the minimum of the maximum $1-AUC$ values over all 100 $\lambda$ values to account for the scenario where we aim to minimize the possible loss for the worst case scenario. Then the model with minimum-worst AUC is selected as our optimal model. The greatest mean AUC and Minimax AUC optimal models are compared against the full model below.
+As we implemented the five-fold cross validation process, we grew concerned over the potential of our step size between $\lambda$ values being too large and that the changes between models selected by consecutive were too dramatic. To increase the precision of our estimate and to prevent the process from removing more than one variable between increasing penalty values, we modified the simple cross validation procedure to include a grid search around perceived maximums when any two models corresponding with consecutive $\lambda$ values differed by the inclusion/exclusion of more than one predictor after a five-fold cross validation process had been completely run through. When this occurred, we created a new range of possible $\lambda$ values centered around the $\lambda$ value ($\hat{\lambda}_{max}$) that had been identified to maximize the mean of the five AUC values produced from the cross validation process. 
+
+We will create our new range using the same logorithmic-exponentiation process we used to construct our initial range of $\lambda$ values. Using the same (unexponentiated) step size between $\log\lambda$ values in the original sequence of values, we defined the maximum of the new sequence of values to be two of those steps above $\log\hat{\lambda}_{max}$ and the minimum to be two steps below. Finally, we constructed a uniform sequence of the same length as the original sequence (consisting of 100 values) between the two endpoints and exponentiated the result to produce our new truncated range of $\lambda$ values. From here, we will run the five-fold cross validation again, and repeat the process until consecutive $\lambda$ values do not remove more than one predictor between models as $\lambda$ increases.
+
 
 **Figure 3: Cross Validation Procedure**
 
@@ -340,10 +342,387 @@ Our group worked in conjunction on many aspects of the project. Amy, Waveley, an
   \item Friedman J, Hastie T, Tibshirani R. Regularization Paths for Generalized Linear Models via Coordinate Descent. J Stat Softw. 2010;33(1):1-22. PMID: 20808728; PMCID: PMC2929880.
 \end{enumerate}
 
+\newpage 
+
+# Coding Appendices
+
+## Appendix A: Logistic Likelihood
+
+```{r, eval=FALSE}
+loglike_func <- function(dat, betavec){
+  
+  dat = bc_trn
+  
+  # x matrix
+  dat_temp <-
+    dat %>%
+    mutate(intercept = 1) %>%
+    select(-diagnosis) %>%
+    relocate(intercept)
+  
+  dat_x <-  
+    dat_temp %>%
+    as.matrix() %>%
+    unname() 
+  
+  # pi vector
+  u <- dat_x %*% betavec
+  pi <- exp(u) / (1 + exp(u))
+  
+  # loglikelihood
+  loglik <- sum(dat[,1]*u - log(1 + exp(u)))
+  
+  #gradient 
+  grad <- t(dat_x) %*% (dat[,1] - pi)
+  
+  # Hessian 
+  W <- diag(nrow(pi))
+  diag(W) <- pi*(1 - pi)
+  hess <- -(t(dat_x) %*% W %*% (dat_x))
+  
+  return(list(loglik = loglik, grad = grad, hess = hess))
+  
+}
+```
+
+\newpage
+
+## Appendix B: Newton Raphson Implementation
+
+```{r}
+NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
+  
+  i <- 0
+  cur <- start 
+  stuff <- loglike_func(dat, cur)
+  res <- c(i = 0, "loglik" = stuff$loglik,  "step" = 1, cur)
+  
+  prevloglik <- -Inf # to make sure it iterates
+  
+  while (i < maxiter && abs(stuff$loglik - prevloglik) > tol) {
+    step <- 1
+    i <- i + 1
+    prevloglik <- stuff$loglik
+    
+    # check negative definite  
+    eigen_vals <- eigen(stuff$hess)
+    
+    if (max(eigen_vals$values) <= 0 ) { # check neg def, if not change 
+      hess <- stuff$hess
+    } else { # if it is pos def then need to adjust 
+      hess <- stuff$hess - (max(eigen_vals$values) + 0.1)*diag(nrow(stuff$hess))
+    } 
+    
+    prev  <- cur
+    cur   <- prev - step*(solve(stuff$hess) %*% stuff$grad)
+    stuff <- loglike_func(dat, cur) # log-lik, gradient, Hessian
+    
+    # step halving
+    while (stuff$loglik < prevloglik) {
+      stuff <- loglike_func(dat, prev)
+      step  <- step / 2 # this is where half steping happens 
+      cur   <- prev - step*(solve(stuff$hess) %*% stuff$grad)
+      stuff <- loglike_func(dat, cur)
+    }
+    # add current values to results matrix
+    res <- rbind(res, c(i, stuff$loglik, step, cur))
+  }
+  
+  colnames(res) <- c("i", "loglik",  "step", "intercept", names(dat[,-1]))
+  return(res)
+}
+```
+
+\newpage
+
+## Appendix C: Logistic Lasso Implementation
+
+```{r, eval=FALSE}
+# logistic function
+logistic <- function(x) 1 / (1 + exp(-x))
+
+# shrinkage function
+S <- function(beta, gamma) {
+  if(abs(beta) <= gamma) {
+    0
+  } else if(beta > 0) {
+    beta - gamma
+  } else {
+    beta + gamma
+  }
+}
+
+# probability adjustment function
+p_adj <- function(p, epsilon) {
+  if (p < epsilon) {
+    0
+  } else if(p > 1 - epsilon) {
+    1
+  } else {
+    p
+  }
+}
+
+# weight adjustment function
+w_adj <- function(p, epsilon) {
+  if ((p < epsilon) | (p > 1 - epsilon)) {
+    epsilon
+  } else {
+    p * (1 - p)
+  }
+}
+
+# executes logistic lasso regression via coordinate descent
+logistic_lasso <- function(
+  # a numeric design matrix or data frame with named columns
+  inputs
+  # a vector of outputs; we must have length(output) == nrow(inputs)
+  , output
+  # a vector of descending penalization factors, ideally on a logarithmic scale
+  , lambda_vec
+  # standardize inputs using scale
+  , standardize   = TRUE
+  # a buffer to prevent divergence when fitted probabilities approach 0 or 1
+  , epsilon       = 10^-8
+  # maximum number of updates to quadratic approximation of likelihood
+  , outer_maxiter =  100
+  # maximum number of cycles for coordinate descent given quadratic approximation
+  , inner_maxiter = 1000
+  # tolerance for convergence of coordinate descent
+  , tolerance     = 10^-12
+) {
+
+  # standardize data unless otherwise specified
+  if(standardize) {
+
+    # format data
+    X <- as.matrix(cbind(rep(1, nrow(inputs)), scale(inputs)))
+    y <- output  
+
+  } else {
+
+    # format data
+    X <- as.matrix(cbind(rep(1, nrow(inputs)), inputs))
+    y <- output    
+
+  }
+
+  # initialize coefficients at origin
+  beta    <- rep(0, ncol(X))
+  beta_df <- NULL
+
+  # begin lambda decrement
+  for(lambda in lambda_vec) {
+
+    outer_term <- 0
+    outer_iter <- 1
+
+    # update quadratic approximation, execute coordinate descent until convergence, repeat
+    while(outer_term < 1) {
+
+      # update quadratic approximation; i.e., taylor expand around current estimates  
+      p <- map_dbl(logistic(X %*% beta), p_adj, epsilon)
+      w <- map_dbl(p, w_adj, epsilon)
+      z <- X %*% beta + (y - p) / w
+
+      inner_term <- 0
+      inner_iter <- 1
+
+      # given current quadratic approximation, execute coordinate descent
+      while(inner_term < 1) {
+
+        beta_old <- beta
+
+        # execute a complete cycle of coordinate descent
+        for(k in 1:ncol(X)) {
+
+          # un-penalized coefficient update
+          b_k_temp <- sum(w * (z - X[ , -k] %*% beta[-k]) * X[ , k]) / sum(w * X[ , k]^2)
+          # shrinkage update
+          b_k      <- S(b_k_temp, (k > 1) * lambda / mean(w * X[ , k]^2))
+          # update coefficient vector
+          beta[k] <- b_k
+
+        }
+
+        inner_iter <- inner_iter + 1
+
+        if(inner_iter == inner_maxiter | max(abs(beta - beta_old)) < tolerance) {
+
+          inner_term <- 1
+
+        }
+
+      }
+
+      outer_iter <- outer_iter + 1
+
+      if(outer_iter == outer_maxiter | inner_iter == 2) {
+
+        outer_term <- 1
+
+      }
+
+    }
+
+    beta_df <- rbind(beta_df, t(beta))
+
+  }
+
+  # format data frame of coefficient estimates
+  colnames(beta_df) <- c("intercept", names(inputs))
+  beta_df <- as_tibble(beta_df)
+
+  # extract number of variables selected for each lambda
+  selected_vec <- apply(beta_df, 1, function(x) sum(x != 0) - 1)
+
+  # output results
+  list(lambda = lambda_vec, beta = beta_df, selected = selected_vec)
+}
+```
+
+
+\newpage
+
+## Appendix D: Defining Lambda Range
+
+```{r, eval=FALSE}
+# lambda initialization function
+lambda_init <- function(start, stop, step, func = identity){
+  lambda_vec <- func(seq(start, stop, step))
+  return(lambda_vec)
+}
+
+
+lambda_max <- max(t(scale(as.matrix(bc_trn[,-1]))) %*% bc_trn[,1]) / nrow(bc_trn[,-1])
+lambda_list <- list(log(lambda_max), log(0.0001), -(log(lambda_max) - log(0.0001))/100, exp)
+
+  lam_start <- lambda_list[[1]]
+  lam_stop <- lambda_list[[2]]
+  lam_step <- lambda_list[[3]]
+  lam_func <- lambda_list[[4]]
+  
+init_lambda_vec <- lambda_init(lam_start, lam_stop, lam_step, lam_func)
+```
 
 \newpage 
 
-# Appendix
+## Appendix F: Cross Validation Implementation
 
+```{r, eval=FALSE}
 
+cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
+  
+  #### initializing lambda vector ####
+  
+  lam_start <- lambda_list[[1]]
+  lam_stop <- lambda_list[[2]]
+  lam_step <- lambda_list[[3]]
+  lam_func <- lambda_list[[4]]
+  
+  lam_list <- tibble(
+    lam_count = 0,
+    lam_start = 0,
+    lam_stop = 0,
+    lam_step = 0
+  )
+  
+  lam_count <- 0
+  del_too_many_var <- 1
+  out_res <- list()
+  res <- list()
+  
+  while (del_too_many_var > 0) {
+
+    lam_count <- lam_count + 1
+    
+    # saving lambda vector parameters
+    cur_lam_list <- tibble(lam_count, lam_start, lam_stop, lam_step)
+    
+    lam_list <- bind_rows(lam_list, cur_lam_list) 
+    
+    new_lambda_vec <- lambda_init(lam_start, lam_stop, lam_step, lam_func)
+    
+    lasso_list <- list()
+    auc_list <- list()
+    
+    for (i in 1:k) {
+      
+      # this will identify the training set as not i
+      trn_set = 
+        training %>% 
+        filter(fold_id != i) %>% 
+        select(-fold_id)
+      
+      # and this assigns i to be the test set
+      tst_set =
+        training %>% 
+        filter(fold_id == i) %>% 
+        select(-fold_id) %>%
+        rename(y = diagnosis)
+      
+      # making matrices
+      X_trn <- trn_set[,-1]
+      Y_trn <- trn_set$diagnosis
+      
+      # lasso_list    
+      lasso_list <- func(inputs = X_trn, output = Y_trn, lambda_vec = new_lambda_vec)
+      
+      lasso_lambda <- lasso_list[[1]]
+      lasso_beta <- lasso_list[[2]]
+      lasso_selected <- tibble(selected_num = lasso_list[[3]])
+      
+      lasso_lam_bet <- cbind(lasso_lambda, lasso_beta) %>% as.matrix()
+      
+      trn_roc <- auc_calc_lasso(lasso_lam_bet, tst_set)
+      auc_list <- bind_rows(auc_list, trn_roc)
+      
+    }
+    
+    auc_res <- 
+      auc_list %>% 
+      group_by(lambda) %>%
+      summarise(mean_auc = mean(auc_vals))
+    
+    res[[lam_count]] <- bind_cols(auc_res, lasso_selected)
+    
+    res[[lam_count]] <- res[[lam_count]] %>% 
+      mutate(num_dropped_vars = selected_num - lag(selected_num, 1))
+    
+    del_too_many_var <- sum(na.omit(res$num_dropped_vars) > 1)
+    
+   if (del_too_many_var > 0) {
+     #### performing grid search ####
+    max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda) %>% mean()
+    lam_start <- lam_start_stop_func(max_auc_lam) + 2*abs(lam_step)
+    lam_stop <- lam_start_stop_func(max_auc_lam) - 2*abs(lam_step)
+    lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
+} 
+  }
+  
+  # creating dataframe to show lambda values and corresponding mean AUC
+  out_res[[1]] <- res
+  out_res[[2]] <- lam_list
+  out_res[[3]] <- auc_list
+  
+  return(out_res)
+}
+```
+
+\newpage
+
+## Appendix E: Grid Search
+
+```{r, eval=FALSE}
+# checking to see if more than one variable is selected between lambdas at any point
+del_too_many_var <- sum(na.omit(res$num_dropped_vars) > 1)
+
+# if more than one variable is selected/dropped, adjust range and step size
+if (del_too_many_var > 0) {
+    max_auc_lam <- res %>% filter(mean_auc == max(mean_auc)) %>% pull(lambda) %>% mean()
+    lam_start <- lam_start_stop_func(max_auc_lam) + 2*abs(lam_step)
+    lam_stop <- lam_start_stop_func(max_auc_lam) - 2*abs(lam_step)
+    lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
+} 
+```
 
