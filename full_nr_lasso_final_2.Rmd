@@ -233,16 +233,24 @@ cbind(nr_beta_est, lasso_betas, lasso_betas_minimax) %>%
 # standardize bc_trn[,-1]
 bc_cov <- as.matrix(scale(bc_trn[,-1]))
 
+glm_full <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = 0)
+glm_full_est <- as.vector(coef(glm_full))
 glmnet_fit <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda)
+glmnet_minimax <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda_minmax)
+glmnet_minimax_est <- as.vector(coef(glmnet_minimax))
 glmnet_est <- as.vector(coef(glmnet_fit))
 
 comp_est <- tibble(
-  names = lasso_betas %>% rownames(),
-  glmnet_est = glmnet_est,
-  lasso_est = lasso_betas,
-  diff = glmnet_est - lasso_est
-)
-comp_est %>% knitr::kable()
+  Coefficients = lasso_betas %>% rownames(),
+  glmnet_full = round(glm_full_est, digits = 4),
+  NewtonRaphson = round(nr_beta_est, digits = 4),
+  glmnet_GreatestMeanAUC = round(glmnet_est, digits = 4),
+  LASSO_GreatestMeanAUC = round(lasso_betas, digits = 4),
+  glmnet_MinimaxAUC = round(glmnet_minimax_est, digits = 4),
+  LASSO_MinimaxAUC = round(lasso_betas_minimax, digits = 4))
+comp_est %>% 
+  kableExtra::kbl() %>% 
+  kableExtra::kable_styling(latex_options = "striped")
 ```
 
 The GLMNET lasso regression procedure and our logistic lasso procedure produce very similar (near identical) results. Yay!
