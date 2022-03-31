@@ -83,10 +83,6 @@ bad <- c(
 
 In a quick exploration of the data, we find many of the predictors are highly correlated with one another. In **Figure 1**, we see a heat map correlation plot where several variables have dark blue coloring representing strong relationships. High collinearity between predictors can cause major issues in regression methods, particularly with high-dimensional data. To explore the correlation further, **Figure 2** shows the 25 largest correlations in our data. We see that the highest correlation is between radius mean and perimeter mean with a correlation value of 0.998 (maximum of 1). In the graph there are 21 combinations of variables that achieve a correlation greater than 0.90, which is a cause for concern in this context. We can break these 21 pairings into equivalence classes for further inspection.
 
-The first grouping that are all mutually correlated is {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents 15 of the correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_se`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group {`concavity_mean`, `concave_points_worst`, `concave_points_mean`} together, and we find the best proxy variable is `concave_points_mean`. Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` in our dataset. All the predictors used can be seen in Table 1.
-
-In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data is standardized before fitting both of our models to help with comparability. For LASSO regression in particular, it is best practice to center and scale data. The $\ell_1$-norm penalization in LASSO regression will unequally penalize coefficient estimates if the covariates are of different magnitudes or scales. Therefore, standardizing our data ensures equal weighting and penalization.
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.asp=0.8}
 title = "Figure 1: Correlation Heat Plot of all Covariates"
 corrplot::corrplot(cor_cov_all, 
@@ -97,6 +93,8 @@ corrplot::corrplot(cor_cov_all,
                    title=title,
                    mar=c(0,0,1,0)) 
 ```
+
+The first grouping that are all mutually correlated is {`area_mean`, `area_worst`, `perimeter_mean`, `perimeter_worst`, `radius_mean`, `radius_worst`}. This grouping represents 15 of the correlation pairs in **Figure 2**.  Mathematically, if we consider the equivalence classes of variables that are highly correlated, these six variables would belong to the same equivalence class. To identify the best proxy for this grouping we look at the highest mean correlation which turns out to be `radius_worst`. The next grouping of correlated variables is {`radius_se`, `perimeter_se`, `area_se`}. The best representative will be `radius_se`. Next we can group {`concavity_mean`, `concave_points_worst`, `concave_points_mean`} together, and we find the best proxy variable is `concave_points_mean`. Finally, {`texture_mean`, `texture_worst`} is our last grouping with `texture_mean` being the variable saved. Thus from all the grouping and saving only the best proxy we will be removing `r length(bad)` variables leaving `r 30 - length(bad)` in our dataset. All the predictors used can be seen in Table 1.
 
 ```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # this doesn't work in pdf files so it is not being run 
@@ -109,7 +107,9 @@ corr_cross(bc_corr, # name of dataset
 
 ![](images/cor_rank.png){width=80%}
 
-Table 1: Patient Characteristics
+In Table 1 we see that there are 357 benign (B) cases and 212 malignant (M) cases. To implement both the full and optimal model the data set will be split into train and test sets using an 80-20 split. The data is standardized before fitting both of our models to help with comparability. For LASSO regression in particular, it is best practice to center and scale data. The $\ell_1$-norm penalization in LASSO regression will unequally penalize coefficient estimates if the covariates are of different magnitudes or scales. Therefore, standardizing our data ensures equal weighting and penalization.
+
+**Table 1: Patient Characteristics**
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 remove_bad_vars <- function(indat, bad_vars){
   outdat <-
@@ -231,28 +231,24 @@ After defining this range of $\lambda$ values, we implemented a five-fold cross 
 
 To select our optimal tuning parameter, we calculated two AUC statistics for each $\lambda$ in our five-fold cross validation: mean AUC and Minimax AUC. The mean AUC is a simple average of the five AUC value produced from the cross validation process for each $\lambda$ in our range. The Minimax AUC selects the minimum of the maximum $1-AUC$ values over all 100 $\lambda$ values to account for the scenario where we aim to minimize the possible loss for the worst case scenario. Then the model with minimum-worst AUC is selected as our optimal model. The greatest mean AUC and Minimax AUC optimal models are compared against the full model below.
 
+**Figure 3: Cross Validation Procedure**
+
+![](images/cv_vis.png){width=105%}
+
 As we implemented the five-fold cross validation process, we grew concerned over the potential of our step size between $\lambda$ values being too large and that the changes between models selected by consecutive were too dramatic. To increase the precision of our estimate and to prevent the process from removing more than one variable between increasing penalty values, we modified the simple cross validation procedure to include a grid search around perceived maximums when any two models corresponding with consecutive $\lambda$ values differed by the inclusion/exclusion of more than one predictor after a five-fold cross validation process had been completely run through. When this occurred, we created a new range of possible $\lambda$ values centered around the $\lambda$ value ($\hat{\lambda}_{max}$) that had been identified to maximize the mean of the five AUC values produced from the cross validation process. 
 
 We will create our new range using the same logorithmic-exponentiation process we used to construct our initial range of $\lambda$ values. Using the same (unexponentiated) step size between $\log\lambda$ values in the original sequence of values, we defined the maximum of the new sequence of values to be two of those steps above $\log\hat{\lambda}_{max}$ and the minimum to be two steps below. Finally, we constructed a uniform sequence of the same length as the original sequence (consisting of 100 values) between the two endpoints and exponentiated the result to produce our new truncated range of $\lambda$ values. From here, we will run the five-fold cross validation again, and repeat the process until consecutive $\lambda$ values do not remove more than one predictor between models as $\lambda$ increases.
 
 
-**Figure 3: Cross Validation Procedure**
-
-![](images/cv_vis.png){width=105%}
-
 ## 2.5 Final Model Evaulation
 
 Each optimal $\lambda$ selected is then used to fit a final model on the full training dataset. To compare these optimal models with the full (Newton-Raphson) model, we use the $\beta_j$ values specified by each to make classification predictions based on the test dataset, which is held out of analysis prior to this step. In other words, the $\beta_j$ values in each model are used in conjunction with the test data, $X_{ij}$, to predict class probabilities for each testing data observation. These predicted probabilities are compared with the observed outcomes in the testing data to produce receiver operating characteristic (ROC) curves, as well as AUC, sensitivity, and specificity values.
-
-*This section might not be needed. I wanted to highlight Charly's question from the pres...*
 
 # 3. Results 
 
 ## 3.1 Cross-Validation Results
 
 Evaluating the cross validation results, we can first confirm that our range of $\lambda$ values has one maximum AUC value when using the greatest mean AUC optimal lambda method. This can be seen in **Figure 4** depicting the largest AUC and corresponding lambda values by the vertical dotted line. After the vertical dotted line the AUC values decrease thus indicating one maximum values exists in our range. 
-
-We can also evaluate our cross validation results by looking at the beta estimates for each corresponding $\lambda$ value. This is seen in **Figure 5**. The smallest value of -log(lambda) corresponds with our null model where all estimates of $\beta_j$ are zero and the $\lambda$ penalization term is large. The largest value of -log(lambda) corresponds with a full model where no $\beta_j$ values are zero. The vertical lines depict the optimal lambda value chosen for each of our selection methods. We see that the greatest mean AUC selects a larger $\lambda$ value, greater penalization, and thus a model with fewer predictor coefficients compared to the minimax AUC method. 
 
 **Figure 4: Cross Validation Results: Selecting Best Lambda**
 
@@ -271,6 +267,8 @@ auc_vs_lambda <-
        y = "Mean AUC")
 auc_vs_lambda
 ```
+
+We can also evaluate our cross validation results by looking at the beta estimates for each corresponding $\lambda$ value. This is seen in **Figure 5**. The smallest value of -log(lambda) corresponds with our null model where all estimates of $\beta_j$ are zero and the $\lambda$ penalization term is large. The largest value of -log(lambda) corresponds with a full model where no $\beta_j$ values are zero. The vertical lines depict the optimal lambda value chosen for each of our selection methods. We see that the greatest mean AUC selects a larger $\lambda$ value, greater penalization, and thus a model with fewer predictor coefficients compared to the minimax AUC method. 
 
 **Figure 5: Cross Validation Results: LASSO Coefficients**
 
@@ -292,13 +290,13 @@ beta_coef_plot
 
 ## 3.2 Model Validation Results 
 
-To compare the beta estimates in our full model and two optimal models, we can look at **Table 2**. Please note that we standardized our data so care needs to be taken before interpreting these values in the context of the project. Also note that care needs to be taken when interpreting the beta values for the optimal model because of standardization and the lambda penalty term. In **Table 2** we see that the greatest mean AUC has the most beta values equal to zero. **Table 3** also confirms that greatest mean AUC produces a model with 6 nonzero beta values with lambda value 0.0101, not including the intercept term. Minimax optimization selects 16 nonzero beta values with lambda value 0.0006. While each model has test AUC values above 0.97, the model with the largest test AUC is the greatest mean optimal model. 
-
-While the AUC value is a good indicator of overall classification performance, we are still confronted with the trade-off between sensitivity and specificity. Imagining is typically the first line of defense for diagnosing cancers, so optimizing sensitivity is usually of great interest. In **Table 3** we have displayed the largest specificity value achieved while realizing sensitivity to equal 1 (all positive individuals correctly identified as positive). Namely, we are looking for a model that sacrifices the least value of specificity while still achieving 1 sensitivity. We can see in **Table 3**, the greatest mean AUC lasso model has the highest specificity, 69.23%. Though minimax AUC Lasso model is the minimum of the worst AUC model, it still achieves much larger specificity than the full model, 55.38%. Namely, if we choose to a lasso model, it is still expected to manage to achieve 55.38% specificity while maintaining 1 sensitivity for the worst case scenario. It is to be observed that full model has the lowest sensitivity, 24.62%, and hence needs to sacrificice specificity more than 75% to achieve 1 sensitivity. This sensitivity and specificity trade-off can also be seen in our ROC curves displayed in **Figure 6**. 
+To compare the beta estimates in our full model and two optimal models, we can look at **Table 2**. Please note that we standardized our data so care needs to be taken before interpreting these values in the context of the project. Also note that care needs to be taken when interpreting the beta values for the optimal model because of standardization and the lambda penalty term. In **Table 2** we see that the greatest mean AUC has the most beta values equal to zero. **Table 3** also confirms that greatest mean AUC produces a model with 6 nonzero beta values with lambda value 0.0101, not including the intercept term. Minimax optimization selects 16 nonzero beta values with lambda value 0.0006. While each model has test AUC values above 0.97, the model with the largest test AUC is the greatest mean optimal model.
 
 **Table 2: Beta Coefficients Comparing Full and Optimal Models**
 
 ![](images/beta_comp_table_cropped.png){width=85%} <!--{height=70%}-->
+
+While the AUC value is a good indicator of overall classification performance, we are still confronted with the trade-off between sensitivity and specificity. Imagining is typically the first line of defense for diagnosing cancers, so optimizing sensitivity is usually of great interest. In **Table 3** we have displayed the largest specificity value achieved while realizing sensitivity to equal 1 (all positive individuals correctly identified as positive). Namely, we are looking for a model that sacrifices the least value of specificity while still achieving 1 sensitivity. We can see in **Table 3**, the greatest mean AUC lasso model has the highest specificity, 69.23%. Though minimax AUC Lasso model is the minimum of the worst AUC model, it still achieves much larger specificity than the full model, 55.38%. Namely, if we choose to a lasso model, it is still expected to manage to achieve 55.38% specificity while maintaining 1 sensitivity for the worst case scenario. It is to be observed that full model has the lowest sensitivity, 24.62%, and hence needs to sacrificice specificity more than 75% to achieve 1 sensitivity. This sensitivity and specificity trade-off can also be seen in our ROC curves displayed in **Figure 6**. 
 
 **Table 3: Model Summary Comparing Full and Optimal Models**
 
@@ -344,9 +342,14 @@ Our group worked in conjunction on many aspects of the project. Amy, Waveley, an
 
 \newpage 
 
-# Coding Appendices
+# Appendices
 
-## Appendix A: Logistic Likelihood
+## Appendix A: Comparison to GLMNET Estimations
+
+![](images/glm_comp_table.png){width=100%}
+\newpage
+
+## Appendix B: Logistic Likelihood
 
 ```{r, eval=FALSE}
 loglike_func <- function(dat, betavec){
@@ -387,7 +390,7 @@ loglike_func <- function(dat, betavec){
 
 \newpage
 
-## Appendix B: Newton Raphson Implementation
+## Appendix C: Newton Raphson Implementation
 
 ```{r}
 NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
@@ -435,7 +438,7 @@ NewtonRaphson <- function(dat,  start, tol = 1e-8, maxiter = 200){
 
 \newpage
 
-## Appendix C: Logistic Lasso Implementation
+## Appendix D: Logistic Lasso Implementation
 
 ```{r, eval=FALSE}
 # logistic function
@@ -584,7 +587,7 @@ logistic_lasso <- function(
 
 \newpage
 
-## Appendix D: Defining Lambda Range
+## Appendix E: Defining Lambda Range
 
 ```{r, eval=FALSE}
 # lambda initialization function
@@ -711,7 +714,7 @@ cv_jt <- function(k = 5, training, func, lam_start_stop_func, lambda_list){
 
 \newpage
 
-## Appendix E: Grid Search
+## Appendix G: Grid Search
 
 ```{r, eval=FALSE}
 # checking to see if more than one variable is selected between lambdas at any point
@@ -725,4 +728,3 @@ if (del_too_many_var > 0) {
     lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
 } 
 ```
-
