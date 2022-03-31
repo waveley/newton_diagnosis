@@ -295,7 +295,7 @@ While the AUC value is a good indicator of overall classification performance, w
 
 **Table 2: Beta Coefficients Comparing Full and Optimal Models**
 
-![](images/beta_comp_table_cropped.png){height=75%}
+![](images/beta_comp_table_cropped.png){width=85%} <!--{height=70%}-->
 
 **Table 3: Model Summary Comparing Full and Optimal Models**
 
