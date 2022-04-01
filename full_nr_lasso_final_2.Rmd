@@ -233,10 +233,10 @@ cbind(nr_beta_est, lasso_betas, lasso_betas_minimax) %>%
 # standardize bc_trn[,-1]
 bc_cov <- as.matrix(scale(bc_trn[,-1]))
 
-glm_full <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = 0)
+glm_full <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = 0, thresh = 10^(-16))
 glm_full_est <- as.vector(coef(glm_full))
-glmnet_fit <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda)
-glmnet_minimax <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda_minmax)
+glmnet_fit <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda, thresh = 10^(-16))
+glmnet_minimax <- glmnet(x = bc_cov , y = bc_trn[,1], family = "binomial", lambda = selected_lambda_minmax, thresh = 10^(-16))
 glmnet_minimax_est <- as.vector(coef(glmnet_minimax))
 glmnet_est <- as.vector(coef(glmnet_fit))
 
