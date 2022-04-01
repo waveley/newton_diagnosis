@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.4.16)  31 MAR 2022 22:36
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.4.16)  1 APR 2022 02:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1257,59 +1257,59 @@ File: images/cor_rank.png Graphic file (type png)
 Package pdftex.def Info: images/cor_rank.png  used on input line 250.
 (pdftex.def)             Requested size: 375.80766pt x 331.86865pt.
 [3 <./report_files/figure-latex/unnamed-chunk-1-1.pdf>] [4 <./images/cor_rank.p
-ng>] [5] [6] [7]
-LaTeX Font Info:    Try loading font information for TS1+lmr on input line 468.
+ng>] [5] [6] [7] [8] [9]
+LaTeX Font Info:    Try loading font information for TS1+lmr on input line 585.
 
 (/usr/local/texlive/2018/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2009/10/30 v1.6 Font defs for Latin Modern
-) [8]
-<images/cv_vis.png, id=97, 1040.88875pt x 583.17876pt>
+) [10]
+<images/cv_vis.png, id=100, 1040.88875pt x 583.17876pt>
 File: images/cv_vis.png Graphic file (type png)
 <use images/cv_vis.png>
-Package pdftex.def Info: images/cv_vis.png  used on input line 561.
+Package pdftex.def Info: images/cv_vis.png  used on input line 675.
 (pdftex.def)             Requested size: 493.2361pt x 276.3454pt.
 
-Overfull \hbox (23.48108pt too wide) in paragraph at lines 561--562
+Overfull \hbox (23.48108pt too wide) in paragraph at lines 675--676
 [][] 
  []
 
-[9] [10 <./images/cv_vis.png>]
-<report_files/figure-latex/unnamed-chunk-4-1.pdf, id=110, 427.5975pt x 248.93pt
+[11] [12 <./images/cv_vis.png>]
+<report_files/figure-latex/unnamed-chunk-4-1.pdf, id=116, 427.5975pt x 248.93pt
 >
 File: report_files/figure-latex/unnamed-chunk-4-1.pdf Graphic file (type pdf)
 <use report_files/figure-latex/unnamed-chunk-4-1.pdf>
 Package pdftex.def Info: report_files/figure-latex/unnamed-chunk-4-1.pdf  used 
-on input line 624.
+on input line 738.
 (pdftex.def)             Requested size: 422.77477pt x 246.12239pt.
-<report_files/figure-latex/unnamed-chunk-5-1.pdf, id=111, 427.5975pt x 250.9375
+<report_files/figure-latex/unnamed-chunk-5-1.pdf, id=117, 427.5975pt x 250.9375
 pt>
 File: report_files/figure-latex/unnamed-chunk-5-1.pdf Graphic file (type pdf)
 <use report_files/figure-latex/unnamed-chunk-5-1.pdf>
 Package pdftex.def Info: report_files/figure-latex/unnamed-chunk-5-1.pdf  used 
-on input line 639.
+on input line 753.
 (pdftex.def)             Requested size: 422.77477pt x 248.10724pt.
-[11 <./report_files/figure-latex/unnamed-chunk-4-1.pdf>]
-<images/beta_comp_table_cropped.png, id=126, 624.83438pt x 526.96875pt>
+[13 <./report_files/figure-latex/unnamed-chunk-4-1.pdf>]
+<images/beta_comp_table_cropped.png, id=133, 624.83438pt x 526.96875pt>
 File: images/beta_comp_table_cropped.png Graphic file (type png)
 <use images/beta_comp_table_cropped.png>
 Package pdftex.def Info: images/beta_comp_table_cropped.png  used on input line
- 660.
+ 774.
 (pdftex.def)             Requested size: 399.30151pt x 336.7603pt.
-[12 <./report_files/figure-latex/unnamed-chunk-5-1.pdf>]
-<images/model_summ_table_cropped.png, id=140, 778.40813pt x 341.77687pt>
+[14 <./report_files/figure-latex/unnamed-chunk-5-1.pdf>]
+<images/model_summ_table_cropped.png, id=147, 778.40813pt x 341.77687pt>
 File: images/model_summ_table_cropped.png Graphic file (type png)
 <use images/model_summ_table_cropped.png>
 Package pdftex.def Info: images/model_summ_table_cropped.png  used on input lin
-e 684.
+e 798.
 (pdftex.def)             Requested size: 399.29901pt x 175.32083pt.
-[13 <./images/beta_comp_table_cropped.png>]
-<images/roc_plot.png, id=147, 412.54124pt x 401.24907pt>
+[15 <./images/beta_comp_table_cropped.png>]
+<images/roc_plot.png, id=153, 412.54124pt x 401.24907pt>
 File: images/roc_plot.png Graphic file (type png)
 <use images/roc_plot.png>
-Package pdftex.def Info: images/roc_plot.png  used on input line 688.
+Package pdftex.def Info: images/roc_plot.png  used on input line 802.
 (pdftex.def)             Requested size: 352.32356pt x 342.67966pt.
-[14 <./images/model_summ_table_cropped.png> <./images/roc_plot.png>]
-Overfull \hbox (82.87723pt too wide) in paragraph at lines 715--719
+[16 <./images/model_summ_table_cropped.png> <./images/roc_plot.png>]
+Overfull \hbox (82.87723pt too wide) in paragraph at lines 829--833
 []\T1/lmr/m/n/10 (-20) Lastly, it is to be ob-served that 6 vari-ables, \T1/lmr
 /m/it/10 (-20) tex-ture_mean\T1/lmr/m/n/10 (-20) , \T1/lmr/m/it/10 (-20) con-ca
 ve_points_mean\T1/lmr/m/n/10 (-20) ,\T1/lmr/m/it/10 (-20) radius_worst\T1/lmr/m
@@ -1317,83 +1317,81 @@ ve_points_mean\T1/lmr/m/n/10 (-20) ,\T1/lmr/m/it/10 (-20) radius_worst\T1/lmr/m
 r/m/it/10 (-20) concavity_worst\T1/lmr/m/n/10 (-20) ,
  []
 
-[15] [16]
-<images/glm_comp_table.png, id=177, 903.375pt x 555.57562pt>
+[17] [18]
+<images/glm_comp_table.png, id=183, 903.375pt x 555.57562pt>
 File: images/glm_comp_table.png Graphic file (type png)
 <use images/glm_comp_table.png>
-Package pdftex.def Info: images/glm_comp_table.png  used on input line 784.
+Package pdftex.def Info: images/glm_comp_table.png  used on input line 898.
 (pdftex.def)             Requested size: 469.7577pt x 288.90097pt.
-[17 <./images/glm_comp_table.png>]
+[19 <./images/glm_comp_table.png>]
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 793.
-[18] [19]
-Underfull \vbox (badness 4242) detected at line 1032
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 907.
+[20] [21]
+Underfull \vbox (badness 4242) detected at line 1146
  []
 
-[20]
-Underfull \vbox (badness 10000) detected at line 1032
+[22]
+Underfull \vbox (badness 10000) detected at line 1146
  []
 
 
-Underfull \vbox (badness 10000) detected at line 1032
+Underfull \vbox (badness 10000) detected at line 1146
  []
 
-[21] [22] [23]
+[23] [24] [25]
 
 LaTeX Font Warning: Font shape `T1/lmtt/bx/it' in size <10> not available
-(Font)              Font shape `T1/lmtt/b/sl' tried instead on input line 1071.
+(Font)              Font shape `T1/lmtt/b/sl' tried instead on input line 1185.
 
 
 
-Underfull \vbox (badness 3138) detected at line 1166
+Underfull \vbox (badness 3138) detected at line 1280
  []
 
-[24] [25] [26]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1189.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 1189.
+[26] [27] [28] [29] [30]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1368.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 1368.
 (./report.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1189.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 1189.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 1189.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1368.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 1368.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 1368.
  ) 
 Here is how much of TeX's memory you used:
- 35907 strings out of 492649
- 817550 string characters out of 6129622
- 1018041 words of memory out of 5000000
- 38950 multiletter control sequences out of 15000+600000
- 78235 words of font info for 133 fonts, out of 8000000 for 9000
+ 35923 strings out of 492649
+ 817745 string characters out of 6129622
+ 1022140 words of memory out of 5000000
+ 38952 multiletter control sequences out of 15000+600000
+ 78520 words of font info for 137 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 62i,14n,96p,900b,609s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 62i,17n,96p,900b,609s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2018/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}{/usr/local/
 texlive/2018/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/local/texlive/2018/
 texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/local/texlive/2018/texmf-dist
-/fonts/enc/dvips/lm/lm-rm.enc}{/usr/local/texlive/2018/texmf-dist/fonts/enc/dvi
-ps/lm/lm-mathsy.enc}{/usr/local/texlive/2018/texmf-dist/fonts/enc/dvips/lm/lm-m
-athex.enc}</usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmbx10.pfb>
+/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/local/texlive/2018/texmf-dist/fonts/enc
+/dvips/lm/lm-mathex.enc}{/usr/local/texlive/2018/texmf-dist/fonts/enc/dvips/lm/
+lm-rm.enc}</usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmbx10.pfb>
 </usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/loca
-l/texlive/2018/texmf-dist/fonts/type1/public/lm/lmbx7.pfb></usr/local/texlive/2
-018/texmf-dist/fonts/type1/public/lm/lmex10.pfb></usr/local/texlive/2018/texmf-
-dist/fonts/type1/public/lm/lmmi10.pfb></usr/local/texlive/2018/texmf-dist/fonts
-/type1/public/lm/lmmi5.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/publ
-ic/lm/lmmi7.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmmib
-10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmmib7.pfb></u
-sr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/te
-xlive/2018/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2018/
-texmf-dist/fonts/type1/public/lm/lmr17.pfb></usr/local/texlive/2018/texmf-dist/
-fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/
-public/lm/lmri10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/
-lmsy10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmsy7.pfb>
-</usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/loca
-l/texlive/2018/texmf-dist/fonts/type1/public/lm/lmtko10.pfb></usr/local/texlive
-/2018/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/texlive/2018/texm
-f-dist/fonts/type1/public/lm/lmtti10.pfb></usr/local/texlive/2018/texmf-dist/fo
-nts/type1/public/amsfonts/symbols/msam10.pfb></usr/local/texlive/2018/texmf-dis
-t/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2018/texmf
--dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
-Output written on report.pdf (26 pages, 858473 bytes).
+l/texlive/2018/texmf-dist/fonts/type1/public/lm/lmex10.pfb></usr/local/texlive/
+2018/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></usr/local/texlive/2018/texmf
+-dist/fonts/type1/public/lm/lmmi5.pfb></usr/local/texlive/2018/texmf-dist/fonts
+/type1/public/lm/lmmi7.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/publ
+ic/lm/lmmib10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmr
+10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmr12.pfb></us
+r/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmr17.pfb></usr/local/tex
+live/2018/texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/2018/te
+xmf-dist/fonts/type1/public/lm/lmri10.pfb></usr/local/texlive/2018/texmf-dist/f
+onts/type1/public/lm/lmsy10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1
+/public/lm/lmsy7.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/
+lmtk10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmtko10.pf
+b></usr/local/texlive/2018/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/lo
+cal/texlive/2018/texmf-dist/fonts/type1/public/lm/lmtti10.pfb></usr/local/texli
+ve/2018/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/local/t
+exlive/2018/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/loc
+al/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
+Output written on report.pdf (30 pages, 858679 bytes).
 PDF statistics:
- 422 PDF objects out of 1000 (max. 8388607)
- 346 compressed objects within 4 object streams
- 86 named destinations out of 1000 (max. 500000)
- 12554 words of extra memory for PDF output out of 14400 (max. 10000000)
+ 436 PDF objects out of 1000 (max. 8388607)
+ 358 compressed objects within 4 object streams
+ 92 named destinations out of 1000 (max. 500000)
+ 12562 words of extra memory for PDF output out of 14400 (max. 10000000)
 

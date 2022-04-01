@@ -214,66 +214,130 @@ The above result provides us with two key insights: (1) if our data matrix is no
 
 
 
-## 2.3 Logistic LASSO Algorithm 
+## 2.3 Logistic LASSO Algorithm
 
-__Lemma 1.__ Consider the optimization problem
-  \[ \min_{x \in \mathbb{R}}  \left\{ \frac{1}{2}(x - b)^2 + c|x| \right\} \]
-for $b \in\mathbb{R}$ and $c \in \mathbb{R}_{++}$. It follows that the minimizer is given by
-  \[ \hat{x} = S(b, c), \]
+The logistic LASSO algorithm is characterized by a constrained optimization problem that is not everywhere differentiable. As such, we consider an approximation of the log-likelihood function $l$ and a coordinate descent procedure to make the problem more tractable. 
+
+\vspace{5mm}
+
+To begin, we consider the function $g : \mathbb{R}^p \to \mathbb{R}$ given by 
+ 	\[ g(\boldsymbol\beta) = - \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \eta(\boldsymbol\alpha), \]
+which is _proportional_ to the Taylor expansion of $l$ centered around $\boldsymbol\alpha \in \mathbb{R}^p$, where
+	\begin{align*}
+		z_i &\equiv \sum_{j = 1}^p \alpha_j x_{ij} + \frac{y_i - \pi_i}{w_i}, \tag{effective response} \\
+		w_i &\equiv \pi_i (1 - \pi_i), \tag{effective weights} \\
+		\pi_i &\equiv  \left( 1 + \exp \left( - \sum_{j = 1}^p \alpha_j x_{ij} \right) \right)^{-1},
+	\end{align*}
+and some function $\eta : \mathbb{R}^p \to \mathbb{R}$ that does not depend on $\boldsymbol\beta \in \mathbb{R}^p$. The details of this derivation can be found in the mathematical appendix (Appendix H), but the result follows largely from the generalized version of Taylor's theorem applied to the gradient vector and hessian matrix computed in the previous section.
+
+\vspace{5mm}
+
+With our quadratic approximation $g$ of $l$ in tow, we consider the minimization problem
+	\[ \underset{\beta_k \in \mathbb{R}}{\arg \min} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\}. \]
+This penalized optimization problem characterizes the updating procedure of our coordinate descent algorithm. However, as alleged earlier, our objective function is not differentiable at the origin. To find our desired minimizer, we consider a series of definitions and lemmas to reduce the complexity of the problem, as inspired by Friedman et al. (2007).
+
+\vspace{5mm}
+
+__Definition 1.__ Let $S : \mathbb{R} \times \mathbb{R}_+ \to \mathbb{R}$ be given by
+	\[ S(\beta, \gamma) = \text{sgn}(\beta) \max \left\{ |\beta| - \gamma, 0 \right\}. \]
+We call $S$ the _shrinkage function_ or the _soft-thresholding operator_. Observe that the map $\beta \mapsto S(\beta, 0)$ is simply the identity function. Thus, we can think of $\gamma \geq 0$ as an additive penalty that shrinks $\beta$ in magnitude toward zero.
+
+\vspace{5mm}
+
+__Lemma 1.__ Let $f : \mathbb{R} \to \mathbb{R}$ be given by
+	\[ f(x) = \frac{1}{2}(x - \beta)^2 + \gamma |x| \]
+for $\beta \in\mathbb{R}$ and $\gamma \in \mathbb{R}_+$. It follows that
+  \[ \underset{x \in \mathbb{R}}{\arg \min} \, f(x) = S(\beta, \gamma), \]
 where $S$ is the soft-thresholding operator.
+
+_Proof._ Because $f$ is a sum of the convex functions $\frac{1}{2} (x - \beta)^2$ and $\gamma |x|$, it is also a convex function. Thus, the minimizer $x^* \in \mathbb{R}$ of $f$ is unique. While $f$ is not differentiable at $x = 0$, it is the case that for all $x \neq 0$,
+	\[ \frac{df}{dx} = x - \beta + \gamma \, \text{sgn}(x). \]
+Including our boundary case at $x = 0$, we obtain three critical points that serve as candidates for our unique minimum. Namely, $x^* \in \{ 0, \beta - \gamma, \beta + \gamma \}$, which satisfy
+	\begin{align*}
+		f(0) &= \frac{1}{2} \beta^2, \\
+		f(\beta - \gamma)  &= \frac{1}{2} \gamma^2 + \gamma |\beta - \gamma|, \quad \text{and} \\
+		f(\beta + \gamma) &= \frac{1}{2} \gamma^2 + \gamma |\beta + \gamma|.
+	\end{align*}
+Now, because $\gamma \geq 0$, it follows that $f(\beta - \gamma) < f(\beta + \gamma)$ if and only if $|\beta - \gamma| < |\beta + \gamma|$ if and only if $\beta > 0$. Moreover, if $\beta > \gamma$, then $|\beta - \gamma| = \beta - \gamma$, and hence
+	\begin{align*}
+		f(\beta - \gamma) - f(0)
+		&= \frac{1}{2} \gamma^2 + \gamma |\beta - \gamma| - \frac{1}{2} \beta^2 \\
+		&= \gamma ( \beta - \gamma) -  \frac{1}{2} (\beta + \gamma)( \beta - \gamma) \\
+		&= - \frac{1}{2} (\beta - \gamma)^2 \\[6pt]
+		&< 0.
+	\end{align*}
+That is, $f(\beta - \gamma) < f(0)$ if and only if $\beta > \gamma$. By analogous argument, we find that $f(\beta + \gamma) < f(0)$ if and only if $\beta < - \gamma$. Combining all of these results, we obtain
+	\[ x^* = \begin{cases}
+		\beta - \gamma & \text{if} \quad \beta > \gamma, \\
+		\beta + \gamma & \text{if} \quad \beta < -\gamma, \\
+		0 & \text{otherwise}.
+	\end{cases} \]
+Of course, the above expression is precisely $x^* = S(\beta, \gamma)$. $\Box$
+
+\vspace{5mm}
 
 __Lemma 2.__ Consider the optimization problem
   \[ \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 \right\} \]
 for some $k \in \{ 1, \ldots, p \}$. It follows that the minimizer is given by
   \[ \hat{\beta}_k = \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right). \]
+_Proof._ We first remark that minimizing our objective function is equivalent to maximizing our quadratic approximation $g$, as the two functions differ by a constant (with respect to $\beta_k$) and in signature. For convenience, we refine earlier notation via
+	\[ \eta_i \equiv \sum_{j = 1}^p \beta_j x_{ij} \quad \text{and} \quad \eta_i^{(k)} \equiv \eta_i - \beta_k x_{ik} \]
+for each $i \in \{ 1, \ldots, n \}$. Note that $\eta_i^{(k)}$ does not depend on $\beta_k$. Because $-g$ is convex with respect $\beta_k$, it has a unique minimizer $\hat{\beta}_k$ satisfying
+	\begin{align*}
+		0
+		&= - n \frac{\partial g}{\partial \beta_k} \\
+		&= \frac{\partial}{\partial \beta_k} \left( \frac{1}{2} \sum_{i = 1}^n w_i \Big(z_i - \eta_i \Big)^2 \right) \\
+		&= \sum_{i = 1}^n w_i \Big(\eta_i - z_i\Big) \frac{\partial \eta_i}{\partial \beta_k} \\
+		&= \sum_{i = 1}^n w_i x_{ik} \Big(\hat{\beta}_k x_{ik} + \eta_i^{(k)} - z_i\Big) \\
+		&= \left( \sum_{i = 1}^n w_i x_{ik}^2 \right) \hat{\beta}_k - \sum_{i = 1}^n w_i x_{ik} \left(z_i - \eta_i^{(k)} \right).
+	\end{align*}
+Rearranging the above expression gives the desired result. $\Box$
+
+\vspace{5mm}
 
 __Lemma 3.__ With $\hat{\beta}_k$ defined as above,
-\begin{align*}
-\min_{\beta_k \in \mathbb{R}}& \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
-  &= \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2}(\beta_k - \hat{\beta}_k)^2 + \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda |\beta_k| \right\}.
-\end{align*}
+  \[ \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\}
+  = \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2}(\beta_k - \hat{\beta}_k)^2 + \lambda_k |\beta_k| \right\}, \quad \text{where} \]
+	\[ \lambda_k \equiv \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda. \]
 
-__Proposition.__ By Lemma 1 and Lemma 3,
-\begin{align*}
- \underset{\beta_k \in \mathbb{R}}{\arg \min} & \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
-  &= S \left(\hat{\beta}_k, \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda \right) 
- \end{align*} 
- 
- **More info from the pres: NEed to be editted to paragraph form**
- 
- 
-For vector $\boldsymbol\alpha \in \mathbb{R}^{p + 1}$, define $g : \mathbb{R}^{p+1} \to \mathbb{R}$ to be
-  \[ g(\boldsymbol\beta) \equiv - \frac{1}{2n} \sum_{i = 1}^n w_i (z_i - \mathbf{X}_i^t \boldsymbol\beta )^2 + O(\boldsymbol\alpha), \]
-the Taylor expansion of our log-likelihood centered around $\boldsymbol\alpha$, where
-  \begin{align*}
-    z_i &\equiv \mathbf{X}_i^t \boldsymbol\alpha + \frac{y_i - \pi_i}{w_i}, \tag{effective response} \\
-    w_i &\equiv \pi_i (1 - \pi_i), \text{ and} \tag{effective weights} \\
-    \pi_i &\equiv \frac{e^{\mathbf{X}_i^t \boldsymbol\alpha}}{1 + e^{\mathbf{X}_i^t \boldsymbol\alpha}}
-  \end{align*}
-for $i \in \{1, \ldots, n \}.$
+_Proof._ For convenience, we consider the following definition: for any functions $h, k : \mathbb{R}^p \to \mathbb{R}$, we say that $h(\boldsymbol\beta) \simeq k(\boldsymbol\beta)$ if and only if the difference $h(\boldsymbol\beta) - k(\boldsymbol\beta)$ does not depend on $\beta_k$. That is, $h$ and $k$ define the same optimization problem with respect to $\beta_k$. Observe that
+	\begin{align*}
+		\sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2
+		&= \sum_{i = 1}^n w_i \Big(z_i - \eta_i \Big)^2 \\
+		&\simeq \sum_{i = 1}^n w_i \left( \Big( \beta_k x_{ik} + \eta_i^{(k)} \Big)^2 - 2 z_i \Big( \beta_k x_{ik} + \eta_i^{(k)} \Big) \right) \\
+		&\simeq \sum_{i = 1}^n w_i \left( \beta_k^2 x_{ik}^2 + 2 \beta_k x_{ik} \eta_i^{(k)} - 2 z_i \beta_k x_{ik} \right) \\
+		&= \left( \sum_{i = 1}^n w_i x_{ik}^2 \right) \beta_k^2 - 2 \left( \sum_{i = 1}^n w_i x_{ik} \left(z_i - \eta_i^{(k)} \right) \right) \beta_k \\
+		&= \left( \sum_{i = 1}^n w_i x_{ik}^2 \right) \left( \beta_k^2 - 2 \hat{\beta}_k \beta_k \right) \\
+		&\simeq  \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)  \left( \beta_k - \hat{\beta}_k \right)^2.
+	\end{align*}
+Similarly, we further obtain
+	\[ \lambda \sum_{j = 1}^p |\beta_j| \simeq \lambda |\beta_k|. \]
+Thus, our optimization problem can be rewritten as
+	\begin{align*}
+	&\min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\} \\
+	&= \min_{\beta_k \in \mathbb{R}} \left\{ \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right) \frac{1}{2} \left( \beta_k - \hat{\beta}_k \right)^2 + \lambda |\beta_k| \right\}.
+	\end{align*}
+Because $x_{ik}$ is a continuous random variable in our data, if not all fitted probabilities are zero or one (a scenario we again mitigate), then $\frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 > 0$ almost surely. As such, dividing through by this term establishes the desired result. $\Box$
 
+\vspace{5mm}
 
-It follows that for any $\lambda \in \mathbb{R}_+$,
-  \[
-    \underset{\beta_k \in \mathbb{R}}{\arg \min} \left\{ g(\boldsymbol\beta) + \lambda \sum_{j = 1}^p |\beta_j| \right\}
-    = S \left(\hat{\beta}_k, \lambda_k \right), \text{ where}
-  \]
-  \begin{align*}
-    \hat{\beta}_k &\equiv \left( \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \sum_{i = 1}^n w_i x_{ik} \left(z_i - \sum_{j \neq k} \beta_j x_{ij} \right), \\
-    \lambda_k &\equiv \left( \frac{1}{n} \sum_{i = 1}^n w_i x_{ik}^2 \right)^{-1} \lambda,
-  \end{align*}
-and $S$ is the soft-thresholding (or _shrinkage_) function. This is analogous to a penalized, weighted Gaussian regression.
+__Proposition 2.__ With $\hat{\beta}_k$ and $\lambda_k$ defined as above,
+  \[ \underset{\beta_k \in \mathbb{R}}{\arg \min} \left\{ \frac{1}{2n} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \lambda \sum_{j = 1}^p |\beta_j| \right\}
+  = S \left(\hat{\beta}_k,  \lambda_k \right). \]
 
+_Proof._ By Lemma 3, our minimization problem is equivalent to that of
+	\[ \min_{\beta_k \in \mathbb{R}} \left\{ \frac{1}{2}(\beta_k - \hat{\beta}_k)^2 + \lambda_k |\beta_k| \right\}. \]
+By Lemma 1, the solution to this minimization problem is uniquely $S \left(\hat{\beta}_k,  \lambda_k \right)$. $\Box$
 
-Our coordinate descent algorithm proceeds as follows.
+\vspace{5mm}
 
-- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$ where $\lambda_{\max} = \frac{max|X^Ty|}{n}$
+Remarkable! The above result informs us that maximizer of $g$ (and hence, the approximate maximizer of $l$) subject to our LASSO constraint is simply the un-penalized maximizer $\hat{\beta}_k$ shrunken by weight-adjusted penalty $\lambda_k$. Given this, our coordinate descent algorithm proceeds as follows.
+
+- Outer Loop: Decrement over $\lambda \in (\lambda_{\max}, \ldots, \lambda_{\min})$, where $\lambda_{\max} \equiv \frac{1}{n} \max \{|\mathbf{X}^t \mathbf{Y}|\}$.
 - Middle Loop: Update $\boldsymbol\alpha = \boldsymbol\beta$ and Taylor expand $g$ around $\boldsymbol\alpha$.
 - Inner Loop: Update $\beta_k = S \left(\hat{\beta}_k, \lambda_k \right)$ sequentially for $k \in \{ 0, 1, \ldots, p, 0, 1, \ldots, p, 0, 1, \ldots \}$ until convergence.
 
-To be specific, an outer loop is created for every new value of $\lambda$ and then we use coordinate descent to solve the penalized weighted least-squares problem. Namely, $z_i$, $w_i$, and $\pi_i$ are updated at the current parameters for every outer loop to update the quadratic approximation $g(\beta)$ and then keep updating parameters until it satisfies the threshold set beforehand.
-
-Note: the middle loop terminates when a given Taylor expansion no longer yields updates (within the specified tolerance) to $\boldsymbol\beta$ in the inner loop.
+Note: the middle loop terminates when a given Taylor expansion no longer yields updates (within the specified tolerance) to $\boldsymbol\beta$ in the inner loop. That is, if we update $\boldsymbol\alpha$ (and hence, $\pi_i, w_i, z_i,$ and $g$) in the middle loop, and if we then find that no elements of $\boldsymbol\beta$ are updated in the following inner loop, we have found our optimal $\boldsymbol\beta$ given penalty $\lambda$.
 
 
 
@@ -786,3 +850,65 @@ if (del_too_many_var > 0) {
     lam_step <- sign(lam_step)*(lam_start - lam_stop)/length(new_lambda_vec)
 } 
 ```
+
+
+\newpage
+
+## Appendix H: Mathematical Appendix
+
+In this appendix entry, we show that the log-likelihood function $f$ can be approximated via the quadratic function $g : \mathbb{R}^p \to \mathbb{R}$ given by
+	\[ g(\boldsymbol\beta) = - \frac{1}{2} \sum_{i = 1}^n w_i \left(z_i - \sum_{j = 1}^p \beta_j x_{ij} \right)^2 + \eta(\boldsymbol\alpha). \]
+Fix vectors $\boldsymbol\beta \in \mathbb{R}^p$. For each observation $i \in \{ 1, \ldots, n \}$, we first define
+	\[ \xi_i \equiv \sum_{j = 1}^p x_{ij} (\beta_j - \alpha_j), \quad \text{such that} \]
+	\begin{align*}
+	 	\frac{y_i - \pi_i}{w_i} - \xi_i
+		&= \frac{y_i - \pi_i}{w_i} - \sum_{j = 1}^p x_{ij} (\beta_j - \alpha_j)\\
+		&= \left( \frac{y_i - \pi_i}{w_i} + \sum_{j = 1}^p x_{ij} \alpha_j\right) - \sum_{j = 1}^p x_{ij} \beta_j\\
+		&= z_i - \sum_{j = 1}^p x_{ij} \beta_j.
+	\end{align*}
+We proceed with a series of computations. Observe that
+	\begin{align*}
+		\Big(\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big)^t (\mathbf{Y} - \boldsymbol\pi)
+		&= \left( \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vdots \\ x_{n1} & \cdots & x_{np} \end{pmatrix}
+			\begin{pmatrix} \beta_1 - \alpha_1 \\ \vdots \\ \beta_p - \alpha_p \end{pmatrix} \right)^t
+			\begin{pmatrix} y_1 - \pi_1 \\ \vdots \\ y_n - \pi_n \end{pmatrix} \\
+		&= \begin{pmatrix} \sum_{j = 1}^p x_{1j} (\beta_j - \alpha_j) \\ \vdots \\ \sum_{j = 1}^p x_{nj} (\beta_j - \alpha_j) \end{pmatrix}^t
+			\begin{pmatrix} y_1 - \pi_1 \\ \vdots \\ y_n - \pi_n \end{pmatrix} \\
+		&= \sum_{i = 1}^n \sum_{j = 1}^p x_{ij} (\beta_j - \alpha_j)(y_i - \pi_i) \\
+		&= \sum_{i = 1}^n (y_i - \pi_i) \xi_i.
+	\end{align*}
+Because $W$ is a diagonal matrix with non-negative elements, $\sqrt{\mathbf{W}}$ is well defined. As such, we can compute
+	\begin{align*}
+		\sqrt{\mathbf{W}}\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)
+		&= \begin{pmatrix} \sqrt{w_1} & \cdots & 0 \\ \vdots & \ddots & \vdots \\ 0 & \cdots & \sqrt{w_n} \end{pmatrix}
+			\begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vdots \\ x_{n1} & \cdots & x_{np} \end{pmatrix}
+			\begin{pmatrix} \beta_1 - \alpha_1 \\ \vdots \\ \beta_p - \alpha_p \end{pmatrix} \\
+		&= \begin{pmatrix}  \sqrt{w_1} x_{11} & \cdots &  \sqrt{w_1} x_{1p} \\ \vdots & \ddots & \vdots \\ \sqrt{w_n} x_{n1} & \cdots & \sqrt{w_n} x_{np} \end{pmatrix}
+			\begin{pmatrix} \beta_1 - \alpha_1 \\ \vdots \\ \beta_p - \alpha_p \end{pmatrix} \\
+		&= \begin{pmatrix} \sum_{j = 1}^p \sqrt{w_1} x_{1j} (\beta_j - \alpha_j)  \\ \vdots \\ \sum_{j = 1}^p \sqrt{w_n} x_{1n} (\beta_j - \alpha_j) \end{pmatrix}.
+	\end{align*}
+Given the above computation, we further obtain
+	\begin{align*}
+		\Big(\sqrt{\mathbf{W}}\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big)^t \Big(\sqrt{\mathbf{W}}\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big)
+		&= \sum_{i = 1}^n \left( \sum_{j = 1}^p \sqrt{w_i} x_{ij} (\beta_j - \alpha_j) \right)^2 \\
+		&= \sum_{i = 1}^n w_i \left( \sum_{j = 1}^p x_{ij} (\beta_j - \alpha_j) \right)^2 \\
+		&= \sum_{i = 1}^n w_i \xi_i^2.
+	\end{align*}
+Finally, we consider the second-order Taylor expansion of $f$ centered at $\boldsymbol\alpha$. In particular, given all of the above computations, and by completing the square, we obtain
+	\begin{align*}
+		f(\boldsymbol\beta)
+		&\approx f(\boldsymbol\alpha) +
+			(\boldsymbol\beta - \boldsymbol\alpha)^t \nabla f(\boldsymbol\alpha) +
+			\frac{1}{2} (\boldsymbol\beta - \boldsymbol\alpha)^t \nabla^2 f(\boldsymbol\alpha) (\boldsymbol\beta - \boldsymbol\alpha) \\
+		&= f(\boldsymbol\alpha) +
+			(\boldsymbol\beta - \boldsymbol\alpha)^t \Big( \mathbf{X}^t (\mathbf{Y} - \boldsymbol\pi) \Big) +
+			\frac{1}{2} (\boldsymbol\beta - \boldsymbol\alpha)^t \Big(-\mathbf{X}^t \mathbf{W} \mathbf{X} \Big) (\boldsymbol\beta - \boldsymbol\alpha) \\
+		&= f(\boldsymbol\alpha) +
+			\Big(\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big)^t (\mathbf{Y} - \boldsymbol\pi) -
+			\frac{1}{2} \Big(\sqrt{\mathbf{W}}\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big)^t \Big(\sqrt{\mathbf{W}}\mathbf{X}(\boldsymbol\beta - \boldsymbol\alpha)\Big) \\
+		&= f(\boldsymbol\alpha) + \sum_{i = 1}^n (y_i - \pi_i) \xi_i - \frac{1}{2} \sum_{i = 1}^n w_i \xi_i^2 \\
+		&= f(\boldsymbol\alpha) - \frac{1}{2} \sum_{i = 1}^n w_i \left( \xi_i^2 - 2 \left( \frac{y_i - \pi_i}{w_i} \right) \xi_i \right) \\
+		&= \eta(\boldsymbol\alpha) - \frac{1}{2} \sum_{i = 1}^n w_i \left( \xi_i - \frac{y_i - \pi_i}{w_i} \right)^2 \\
+		&= \eta(\boldsymbol\alpha) - \frac{1}{2} \sum_{i = 1}^n w_i \left( z_i - \sum_{j = 1}^p x_{ij} \beta_j \right)^2,
+	\end{align*}
+where $\eta : \mathbb{R}^p \to \mathbb{R}$ is some function of $\boldsymbol\alpha$ that does not depend on $\boldsymbol\beta$.
