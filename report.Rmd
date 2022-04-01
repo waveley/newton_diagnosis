@@ -55,15 +55,15 @@ As breast cancer has become one of the most common kinds of cancer in the United
 
 ## 1.2. Objectives
 
-In this paper we investigate two questions: does having more data always correspond to an advantage in diagnosis prediction? Can we reduce the amount of data we need to collect while maintaining (or increasing) predictive power?
+Our investigation was driven by seeking to answer two questions: does having more data always correspond to an advantage in diagnosis prediction? Can we reduce the amount of data we need to collect while maintaining (or increasing) predictive power?
 
-To this end, we use a breast cancer imaging dataset (detailed below) to fit two different models with the goal of predicting patient diagnosis outcomes. The first is a generalized linear-logistic regression model with a full set of predictors (i.e., "full model"), calculated using a Newton-Raphson optimization algorithm. The second is a penalized logistic-LASSO model (i.e., "optimal model"), which is capable of reducing the number of selected predictors from our dataset. This is implemented using a path-wise coordinate-descent optimization algorithm, and we utilize five-fold cross validation to obtain the optimal $\lambda$ penalization term. The algorithms for each method are discussed below in the methods section and corresponding code can be found in the appendix.
+Towards the end of answering our queries, we use a breast cancer imaging dataset (detailed below) to fit two different models of different sizes, both of which would predict patient diagnosis outcomes. The first model is a linear-logistic regression model with what we defined to be a full set of predictors (i.e., "full model") and model parameters derived through a Newton-Raphson optimization algorithm. The second is a logistic-LASSO model that contains fewer predictors (i.e., "optimal model"), which is implemented using a path-wise coordinate-descent optimization algorithm, and tuned via a five-fold cross validation to obtain an optimal penalization term ($\lambda$). The algorithms for each method are discussed below in the methods section and corresponding code can be found in the appendix.
 
 # 2. Methods
 
 ## 2.1. Data Cleaning and Exploratory Analysis
 
-The data set of interest contains 569 rows and 32 columns related to breast tissue imaging with each entry representing an individual patient. The outcome of interest is patient diagnosis, taking on values of either malignant or benign. One column contains information about patient ID, which will be removed from our dataset. The other 30 columns correspond to summary measures (mean, standard deviation, and maximum) of variables such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension. This dataset does not contain any missing values.
+The dataset of interest contains 569 rows and 32 columns related to breast tissue imaging with each entry representing an individual patient. The outcome of interest is patient diagnosis, taking on values of either malignant or benign. One column contains information about patient ID, which will be removed from our dataset. The other 30 columns correspond to summary measures (mean, standard error, and maximum) of variables such as radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry, and fractal dimension. This dataset does not contain any missing values.
 
 ```{r predictor correlation plot, message=FALSE, warning=FALSE, include=FALSE}
 bc_corr <- bc %>% 
